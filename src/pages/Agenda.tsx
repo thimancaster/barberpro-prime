@@ -1,5 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +48,7 @@ import {
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useRealtimeAppointments } from '@/hooks/useRealtimeAppointments';
 
 interface AppointmentWithRelations extends Appointment {
   client: Client | null;
@@ -96,6 +96,19 @@ export default function Agenda() {
     }
     return slots;
   }, [organization]);
+
+  // Realtime subscription for appointments
+  const handleRealtimeUpdate = useCallback(() => {
+    fetchData();
+  }, [organization?.id, selectedDate, viewMode]);
+
+  useRealtimeAppointments({
+    organizationId: organization?.id,
+    onInsert: handleRealtimeUpdate,
+    onUpdate: handleRealtimeUpdate,
+    onDelete: handleRealtimeUpdate,
+    showToasts: true,
+  });
 
   useEffect(() => {
     if (organization?.id) {
@@ -258,7 +271,7 @@ export default function Agenda() {
   };
 
   return (
-    <AppLayout title="Agenda">
+    <div className="space-y-6">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -642,6 +655,6 @@ export default function Agenda() {
           </DialogContent>
         </Dialog>
       </div>
-    </AppLayout>
+    </div>
   );
 }

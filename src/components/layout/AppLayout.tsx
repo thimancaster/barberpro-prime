@@ -1,25 +1,18 @@
-import { ReactNode } from 'react';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
+import { Outlet } from 'react-router-dom';
 
-interface AppLayoutProps {
-  children: ReactNode;
-  title?: string;
-}
-
-export function AppLayout({ children, title }: AppLayoutProps) {
+export function AppLayout() {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1">
-          <AppHeader title={title} />
-          <main className="flex-1 p-6 animate-fade-in">
-            {children}
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <SidebarInset className="flex-1">
+        <AppHeader />
+        <main className="flex-1 p-6 animate-fade-in">
+          <Outlet />
+        </main>
+      </SidebarInset>
+    </div>
   );
 }

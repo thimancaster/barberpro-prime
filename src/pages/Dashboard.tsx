@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -168,7 +167,7 @@ export default function Dashboard() {
   };
 
   return (
-    <AppLayout title="Dashboard">
+    <div className="space-y-6">
       <div className="space-y-6">
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -320,6 +319,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </div>
   );
 }

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -193,7 +192,7 @@ export default function Servicos() {
   };
 
   return (
-    <AppLayout title="Serviços">
+    <div className="space-y-6">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -425,6 +424,6 @@ export default function Servicos() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </div>
   );
 }

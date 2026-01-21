@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,7 +66,7 @@ export default function Configuracoes() {
   };
 
   return (
-    <AppLayout title="Configurações">
+    <div className="max-w-2xl space-y-6">
       <div className="max-w-2xl space-y-6">
         {/* Organization Settings */}
         <Card className="card-gradient border-border/50">
@@ -158,6 +157,6 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </div>
   );
 }
