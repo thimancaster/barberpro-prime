@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -215,7 +214,7 @@ export default function Despesas() {
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
   return (
-    <AppLayout title="Despesas">
+    <div className="space-y-6">
       <div className="space-y-6">
         {/* Summary */}
         <Card className="card-gradient border-border/50">
@@ -464,6 +463,6 @@ export default function Despesas() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </div>
   );
 }

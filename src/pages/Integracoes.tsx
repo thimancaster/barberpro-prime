@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -162,16 +161,14 @@ export default function Integracoes() {
 
   if (isLoading) {
     return (
-      <AppLayout title="Integrações">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <AppLayout title="Integrações">
+    <div className="max-w-2xl space-y-6">
       <div className="max-w-2xl space-y-6">
         {/* n8n Webhook Integration */}
         <Card className="card-gradient border-border/50">
@@ -289,6 +286,6 @@ export default function Integracoes() {
           )}
         </Button>
       </div>
-    </AppLayout>
+    </div>
   );
 }

@@ -4,10 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 // Pages
+import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Agenda from "./pages/Agenda";
 import Clientes from "./pages/Clientes";
@@ -20,6 +22,10 @@ import Integracoes from "./pages/Integracoes";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
+// Components
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AppLayout } from "./components/layout/AppLayout";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -29,28 +35,46 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/invite/:token" element={<AcceptInvite />} />
-
-            {/* Protected routes */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
-            <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
-            <Route path="/servicos" element={<ProtectedRoute><Servicos /></ProtectedRoute>} />
-            <Route path="/equipe" element={<ProtectedRoute><Equipe /></ProtectedRoute>} />
-            
-            {/* Admin only routes */}
-            <Route path="/produtos" element={<ProtectedRoute requireAdmin><Produtos /></ProtectedRoute>} />
-            <Route path="/despesas" element={<ProtectedRoute requireAdmin><Despesas /></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<ProtectedRoute requireAdmin><Configuracoes /></ProtectedRoute>} />
-            <Route path="/integracoes" element={<ProtectedRoute requireAdmin><Integracoes /></ProtectedRoute>} />
-
-            {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <SidebarProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/convite/:token" element={<AcceptInvite />} />
+              
+              {/* Onboarding - requires auth but no organization */}
+              <Route
+                path="/onboarding"
+                element={
+                  <ProtectedRoute requireOrganization={false}>
+                    <Onboarding />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Protected routes - requires auth and organization */}
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/agenda" element={<Agenda />} />
+                <Route path="/clientes" element={<Clientes />} />
+                <Route path="/servicos" element={<Servicos />} />
+                <Route path="/equipe" element={<Equipe />} />
+                <Route path="/produtos" element={<Produtos />} />
+                <Route path="/despesas" element={<Despesas />} />
+                <Route path="/configuracoes" element={<Configuracoes />} />
+                <Route path="/integracoes" element={<Integracoes />} />
+              </Route>
+              
+              {/* Catch all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </SidebarProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
