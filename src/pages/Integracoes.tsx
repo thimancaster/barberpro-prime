@@ -97,16 +97,75 @@ export default function Integracoes() {
     }
   };
 
+  const isValidWebhookUrl = (url: string): { valid: boolean; error?: string } => {
+    try {
+      const parsedUrl = new URL(url);
+      
+      // Only allow https (and http for development with explicit warning)
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+        return { valid: false, error: 'URL deve usar protocolo HTTP ou HTTPS' };
+      }
+      
+      const hostname = parsedUrl.hostname.toLowerCase();
+      
+      // Block localhost and loopback addresses
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        return { valid: false, error: 'URLs locais não são permitidas' };
+      }
+      
+      // Block private IP ranges
+      const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+      if (ipv4Match) {
+        const [, a, b, c] = ipv4Match.map(Number);
+        // 10.0.0.0/8
+        if (a === 10) {
+          return { valid: false, error: 'IPs de rede privada não são permitidos' };
+        }
+        // 172.16.0.0/12
+        if (a === 172 && b >= 16 && b <= 31) {
+          return { valid: false, error: 'IPs de rede privada não são permitidos' };
+        }
+        // 192.168.0.0/16
+        if (a === 192 && b === 168) {
+          return { valid: false, error: 'IPs de rede privada não são permitidos' };
+        }
+        // 169.254.0.0/16 (link-local)
+        if (a === 169 && b === 254) {
+          return { valid: false, error: 'IPs link-local não são permitidos' };
+        }
+      }
+      
+      // Block internal hostnames
+      if (hostname.endsWith('.local') || hostname.endsWith('.internal') || hostname.endsWith('.lan')) {
+        return { valid: false, error: 'Hostnames internos não são permitidos' };
+      }
+      
+      return { valid: true };
+    } catch {
+      return { valid: false, error: 'URL inválida' };
+    }
+  };
+
   const handleTestConnection = async () => {
     if (!formData.webhook_url) {
       toast.error('Configure a URL do Webhook primeiro');
       return;
     }
 
+    // Validate URL before testing
+    const validation = isValidWebhookUrl(formData.webhook_url);
+    if (!validation.valid) {
+      toast.error('URL inválida', { description: validation.error });
+      return;
+    }
+
     setIsTesting(true);
 
     try {
-      // Simulate a test by sending a test payload
+      // Use AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(formData.webhook_url, {
         method: 'POST',
         headers: {
@@ -116,9 +175,13 @@ export default function Integracoes() {
           type: 'test',
           message: 'Teste de conexão BarberPro Prime',
           timestamp: new Date().toISOString(),
-          organization_id: organization?.id,
+          // Don't send organization_id to untrusted endpoints - use a test identifier
+          test_id: crypto.randomUUID(),
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const success = response.ok;
 
@@ -152,7 +215,11 @@ export default function Integracoes() {
           .eq('id', integration.id);
       }
 
-      toast.error('Erro ao testar conexão', { description: error.message });
+      const errorMessage = error.name === 'AbortError' 
+        ? 'Tempo limite excedido (10s)' 
+        : error.message;
+
+      toast.error('Erro ao testar conexão', { description: errorMessage });
       fetchIntegration();
     } finally {
       setIsTesting(false);
