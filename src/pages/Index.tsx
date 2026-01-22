@@ -131,7 +131,7 @@ const Index = () => {
               <span className="text-gold-gradient">Barbearias Premium</span>
             </h1>
             
-            <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto text-muted-foreground">
+            <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto text-destructive-foreground">
               Gerencie agendamentos, clientes, equipe e finanças em um só lugar. 
               Eleve sua barbearia ao próximo nível com tecnologia de ponta.
             </p>
