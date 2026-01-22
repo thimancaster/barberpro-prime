@@ -153,6 +153,9 @@ export type Database = {
           name: string
           organization_id: string
           paid_at: string | null
+          parent_expense_id: string | null
+          recurrence_day: number | null
+          recurrence_type: string | null
           status: Database["public"]["Enums"]["expense_status"] | null
           updated_at: string
         }
@@ -167,6 +170,9 @@ export type Database = {
           name: string
           organization_id: string
           paid_at?: string | null
+          parent_expense_id?: string | null
+          recurrence_day?: number | null
+          recurrence_type?: string | null
           status?: Database["public"]["Enums"]["expense_status"] | null
           updated_at?: string
         }
@@ -181,6 +187,9 @@ export type Database = {
           name?: string
           organization_id?: string
           paid_at?: string | null
+          parent_expense_id?: string | null
+          recurrence_day?: number | null
+          recurrence_type?: string | null
           status?: Database["public"]["Enums"]["expense_status"] | null
           updated_at?: string
         }
@@ -190,6 +199,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_parent_expense_id_fkey"
+            columns: ["parent_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
         ]

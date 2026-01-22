@@ -4,6 +4,7 @@ export type AppRole = 'admin' | 'barber';
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 export type ServiceCategory = 'cabelo' | 'barba' | 'combo' | 'outros';
 export type ExpenseStatus = 'pending' | 'paid';
+export type RecurrenceType = 'none' | 'monthly' | 'weekly' | 'yearly';
 export type StockMovementType = 'entry' | 'exit' | 'sale' | 'adjustment';
 
 export interface Organization {
@@ -140,6 +141,9 @@ export interface Expense {
   paid_at?: string;
   status: ExpenseStatus;
   is_recurring: boolean;
+  recurrence_type?: RecurrenceType;
+  recurrence_day?: number;
+  parent_expense_id?: string;
   created_at: string;
   updated_at: string;
 }

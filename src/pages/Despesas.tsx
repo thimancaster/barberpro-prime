@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -31,8 +32,8 @@ import {
 } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Expense, ExpenseStatus } from '@/types/database';
-import { Plus, Search, Edit, Trash2, Loader2, Receipt, CheckCircle } from 'lucide-react';
+import { Expense, ExpenseStatus, RecurrenceType } from '@/types/database';
+import { Plus, Search, Edit, Trash2, Loader2, Receipt, CheckCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -50,6 +51,13 @@ const expenseCategories = [
   'Outros',
 ];
 
+const recurrenceLabels: Record<RecurrenceType, string> = {
+  none: 'Não recorrente',
+  weekly: 'Semanal',
+  monthly: 'Mensal',
+  yearly: 'Anual',
+};
+
 export default function Despesas() {
   const { organization, isAdmin } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -66,6 +74,9 @@ export default function Despesas() {
     category: '',
     due_date: '',
     status: 'pending' as ExpenseStatus,
+    is_recurring: false,
+    recurrence_type: 'none' as RecurrenceType,
+    recurrence_day: '',
   });
 
   useEffect(() => {
@@ -114,6 +125,9 @@ export default function Despesas() {
         due_date: formData.due_date || null,
         status: formData.status,
         paid_at: formData.status === 'paid' ? new Date().toISOString() : null,
+        is_recurring: formData.is_recurring,
+        recurrence_type: formData.is_recurring ? formData.recurrence_type : 'none',
+        recurrence_day: formData.recurrence_day ? parseInt(formData.recurrence_day) : null,
       };
 
       if (editingExpense) {
@@ -185,6 +199,9 @@ export default function Despesas() {
       category: expense.category || '',
       due_date: expense.due_date || '',
       status: expense.status,
+      is_recurring: expense.is_recurring || false,
+      recurrence_type: expense.recurrence_type || 'none',
+      recurrence_day: expense.recurrence_day?.toString() || '',
     });
     setIsDialogOpen(true);
   };
@@ -198,6 +215,9 @@ export default function Despesas() {
       category: '',
       due_date: '',
       status: 'pending',
+      is_recurring: false,
+      recurrence_type: 'none',
+      recurrence_day: '',
     });
   };
 
@@ -340,7 +360,53 @@ export default function Despesas() {
                       </Select>
                     </div>
                   </div>
-                </div>
+                  </div>
+
+                  {/* Recurring expense toggle */}
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Despesa Recorrente</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Ativar para despesas fixas mensais
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.is_recurring}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_recurring: checked })}
+                    />
+                  </div>
+
+                  {formData.is_recurring && (
+                    <div className="grid grid-cols-2 gap-4 animate-fade-in">
+                      <div className="space-y-2">
+                        <Label>Frequência</Label>
+                        <Select
+                          value={formData.recurrence_type}
+                          onValueChange={(v: RecurrenceType) => setFormData({ ...formData, recurrence_type: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="weekly">Semanal</SelectItem>
+                            <SelectItem value="monthly">Mensal</SelectItem>
+                            <SelectItem value="yearly">Anual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Dia do Vencimento</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={formData.recurrence_day}
+                          onChange={(e) => setFormData({ ...formData, recurrence_day: e.target.value })}
+                          placeholder="Ex: 10"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -401,7 +467,15 @@ export default function Despesas() {
                   {filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell>
-                        <div className="font-medium">{expense.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{expense.name}</span>
+                          {expense.is_recurring && expense.recurrence_type && expense.recurrence_type !== 'none' && (
+                            <Badge variant="outline" className="gap-1 text-xs">
+                              <RefreshCw className="w-3 h-3" />
+                              {recurrenceLabels[expense.recurrence_type]}
+                            </Badge>
+                          )}
+                        </div>
                         {expense.description && (
                           <div className="text-xs text-muted-foreground truncate max-w-[200px]">
                             {expense.description}

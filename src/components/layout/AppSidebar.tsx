@@ -10,6 +10,7 @@ import {
   Settings,
   Webhook,
   LogOut,
+  BarChart3,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,6 +42,7 @@ const mainNavItems = [
 const financeNavItems = [
   { title: 'Produtos', url: '/produtos', icon: Package },
   { title: 'Despesas', url: '/despesas', icon: Receipt },
+  { title: 'Relatórios', url: '/relatorios', icon: BarChart3 },
 ];
 
 const configNavItems = [

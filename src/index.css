@@ -60,6 +60,13 @@
     --input: 0 0% 18%;
     --ring: 43 54% 56%;
 
+    /* Chart Colors */
+    --chart-1: 43 54% 56%;             /* Gold */
+    --chart-2: 199 89% 48%;            /* Blue */
+    --chart-3: 142 76% 36%;            /* Green */
+    --chart-4: 38 92% 50%;             /* Orange */
+    --chart-5: 280 65% 60%;            /* Purple */
+
     --radius: 0.5rem;
 
     /* Sidebar */
