@@ -132,7 +132,10 @@ export default function Dashboard() {
 
       setUpcomingAppointments((upcoming as UpcomingAppointment[]) || []);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching dashboard data:', error);
+      }
     } finally {
       setIsLoading(false);
     }

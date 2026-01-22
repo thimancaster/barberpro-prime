@@ -60,83 +60,31 @@ export default function Onboarding() {
     setIsLoading(true);
 
     try {
-      // 1. Check if slug is unique
-      const { data: existingOrg } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', formData.slug)
-        .single();
-
-      if (existingOrg) {
-        toast.error('Este slug já está em uso. Escolha outro nome.');
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Create organization
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: formData.name,
-          slug: formData.slug,
-          phone: formData.phone || null,
-          email: formData.email || null,
-          address: formData.address || null,
-          opening_time: formData.openingTime,
-          closing_time: formData.closingTime,
-          working_days: [1, 2, 3, 4, 5, 6],
-        })
-        .select()
-        .single();
-
-      if (orgError) throw orgError;
-
-      // 3. Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: user.id,
-          organization_id: org.id,
-          full_name: formData.fullName,
-          phone: formData.phone || null,
-          commission_percentage: 100,
-          is_active: true,
-        });
-
-      if (profileError) throw profileError;
-
-      // 4. Assign admin role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: user.id,
-          organization_id: org.id,
-          role: 'admin',
-        });
-
-      if (roleError) throw roleError;
-
-      // 5. Create default working hours (Mon-Sat)
-      const workingHoursData = [];
-      for (let day = 1; day <= 6; day++) {
-        workingHoursData.push({
-          profile_id: user.id,
-          day_of_week: day,
-          start_time: formData.openingTime,
-          end_time: formData.closingTime,
-          is_working: true,
-        });
-      }
-      // Sunday off
-      workingHoursData.push({
-        profile_id: user.id,
-        day_of_week: 0,
-        start_time: formData.openingTime,
-        end_time: formData.closingTime,
-        is_working: false,
+      // Use secure RPC function to atomically create organization, profile, and role
+      // This prevents self-assignment of admin role outside intended flows
+      const { data: orgId, error } = await supabase.rpc('create_organization', {
+        _org_name: formData.name,
+        _org_slug: formData.slug,
+        _org_phone: formData.phone || null,
+        _org_email: formData.email || null,
+        _org_address: formData.address || null,
+        _opening_time: formData.openingTime,
+        _closing_time: formData.closingTime,
+        _user_full_name: formData.fullName,
+        _user_phone: formData.phone || null,
       });
 
-      await supabase.from('working_hours').insert(workingHoursData);
+      if (error) {
+        // Handle specific RPC errors with user-friendly messages
+        if (error.message.includes('user_already_has_organization')) {
+          throw new Error('Você já possui uma organização cadastrada');
+        } else if (error.message.includes('slug_already_exists')) {
+          throw new Error('Este slug já está em uso. Escolha outro nome.');
+        } else if (error.message.includes('not_authenticated')) {
+          throw new Error('Você precisa estar autenticado');
+        }
+        throw error;
+      }
 
       toast.success('Barbearia criada com sucesso!');
       
@@ -145,7 +93,10 @@ export default function Onboarding() {
       navigate('/dashboard');
       
     } catch (error: any) {
-      console.error('Error creating organization:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error creating organization:', error);
+      }
       toast.error(error.message || 'Erro ao criar barbearia');
     } finally {
       setIsLoading(false);

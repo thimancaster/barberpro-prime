@@ -173,7 +173,10 @@ export default function Agenda() {
 
       setBarbers(barbersData || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching data:', error);
+      }
     } finally {
       setIsLoading(false);
     }

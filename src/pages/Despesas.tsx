@@ -88,7 +88,10 @@ export default function Despesas() {
       if (error) throw error;
       setExpenses(data || []);
     } catch (error) {
-      console.error('Error fetching expenses:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching expenses:', error);
+      }
     } finally {
       setIsLoading(false);
     }

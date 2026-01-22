@@ -83,7 +83,10 @@ export default function Servicos() {
       if (error) throw error;
       setServices(data || []);
     } catch (error) {
-      console.error('Error fetching services:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching services:', error);
+      }
     } finally {
       setIsLoading(false);
     }

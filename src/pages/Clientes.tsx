@@ -65,7 +65,10 @@ export default function Clientes() {
       if (error) throw error;
       setClients(data || []);
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching clients:', error);
+      }
     } finally {
       setIsLoading(false);
     }

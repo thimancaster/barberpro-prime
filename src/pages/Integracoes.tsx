@@ -54,7 +54,10 @@ export default function Integracoes() {
         });
       }
     } catch (error) {
-      console.error('Error fetching integration:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching integration:', error);
+      }
     } finally {
       setIsLoading(false);
     }
