@@ -41,6 +41,9 @@ const mainNavItems = [
 
 const financeNavItems = [
   { title: 'Produtos', url: '/produtos', icon: Package },
+  { title: 'Vendas (PDV)', url: '/vendas', icon: Package },
+  { title: 'Caixa', url: '/caixa', icon: Receipt },
+  { title: 'Comissões', url: '/comissoes', icon: Users },
   { title: 'Despesas', url: '/despesas', icon: Receipt },
   { title: 'Relatórios', url: '/relatorios', icon: BarChart3 },
 ];

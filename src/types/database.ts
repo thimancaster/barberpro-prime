@@ -29,6 +29,7 @@ export interface Profile {
   avatar_url?: string;
   phone?: string;
   commission_percentage: number;
+  product_commission_percentage?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
