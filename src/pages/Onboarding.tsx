@@ -62,7 +62,8 @@ export default function Onboarding() {
     try {
       // Use secure RPC function to atomically create organization, profile, and role
       // This prevents self-assignment of admin role outside intended flows
-      const { data: orgId, error } = await supabase.rpc('create_organization', {
+      // Type assertion needed as types.ts is auto-generated and may not include new RPC functions yet
+      const { data: orgId, error } = await (supabase.rpc as any)('create_organization', {
         _org_name: formData.name,
         _org_slug: formData.slug,
         _org_phone: formData.phone || null,
