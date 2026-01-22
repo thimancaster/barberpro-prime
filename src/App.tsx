@@ -18,9 +18,13 @@ import Equipe from "./pages/Equipe";
 import Produtos from "./pages/Produtos";
 import Relatorios from "./pages/Relatorios";
 import Despesas from "./pages/Despesas";
+import Vendas from "./pages/Vendas";
+import Caixa from "./pages/Caixa";
+import Comissoes from "./pages/Comissoes";
 import Configuracoes from "./pages/Configuracoes";
 import Integracoes from "./pages/Integracoes";
 import AcceptInvite from "./pages/AcceptInvite";
+import AgendamentoPublico from "./pages/AgendamentoPublico";
 import NotFound from "./pages/NotFound";
 
 // Components
@@ -42,6 +46,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/convite/:token" element={<AcceptInvite />} />
+              <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
               
               {/* Onboarding - requires auth but no organization */}
               <Route
@@ -67,6 +72,9 @@ const App = () => (
                 <Route path="/servicos" element={<Servicos />} />
                 <Route path="/equipe" element={<Equipe />} />
                 <Route path="/produtos" element={<Produtos />} />
+                <Route path="/vendas" element={<Vendas />} />
+                <Route path="/caixa" element={<Caixa />} />
+                <Route path="/comissoes" element={<Comissoes />} />
                 <Route path="/relatorios" element={<Relatorios />} />
                 <Route path="/despesas" element={<Despesas />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
