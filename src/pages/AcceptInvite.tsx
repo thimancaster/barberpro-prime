@@ -14,9 +14,8 @@ interface InviteData {
   organization_id: string;
   role: 'admin' | 'barber';
   expires_at: string;
-  organization?: {
-    name: string;
-  };
+  accepted_at: string | null;
+  organization_name: string;
 }
 
 export default function AcceptInvite() {
@@ -44,23 +43,27 @@ export default function AcceptInvite() {
 
   const fetchInvite = async () => {
     try {
-      const { data, error } = await supabase
-        .from('invites')
-        .select(`
-          *,
-          organization:organizations(name)
-        `)
-        .eq('token', token)
-        .single();
+      // Use secure RPC function instead of direct table access
+      const { data, error } = await supabase.rpc('get_invite_public', { 
+        _token: token 
+      });
 
       if (error) throw error;
 
-      if (data.accepted_at) {
+      // RPC returns an array, get first result
+      const inviteData = Array.isArray(data) ? data[0] : data;
+
+      if (!inviteData) {
+        setIsExpired(true);
+        return;
+      }
+
+      if (inviteData.accepted_at) {
         setIsAccepted(true);
-      } else if (new Date(data.expires_at) < new Date()) {
+      } else if (new Date(inviteData.expires_at) < new Date()) {
         setIsExpired(true);
       } else {
-        setInvite(data);
+        setInvite(inviteData as InviteData);
       }
     } catch (error) {
       console.error('Error fetching invite:', error);
@@ -97,37 +100,31 @@ export default function AcceptInvite() {
 
       if (signUpError) throw signUpError;
 
-      // Wait a bit for the user to be created
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Wait a bit for the user to be created and session to be established
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Get the new user
+      // Get the new user session
       const { data: { user: newUser } } = await supabase.auth.getUser();
 
       if (!newUser) throw new Error('Erro ao criar usuário');
 
-      // Create profile
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: newUser.id,
-        organization_id: invite.organization_id,
-        full_name: formData.fullName,
+      // Use secure RPC to atomically accept invite, create profile, and assign role
+      const { error: acceptError } = await supabase.rpc('accept_invite', {
+        _token: token!,
+        _full_name: formData.fullName
       });
 
-      if (profileError) throw profileError;
-
-      // Create user role
-      const { error: roleError } = await supabase.from('user_roles').insert({
-        user_id: newUser.id,
-        organization_id: invite.organization_id,
-        role: invite.role,
-      });
-
-      if (roleError) throw roleError;
-
-      // Mark invite as accepted
-      await supabase
-        .from('invites')
-        .update({ accepted_at: new Date().toISOString() })
-        .eq('id', invite.id);
+      if (acceptError) {
+        // Handle specific RPC errors
+        if (acceptError.message.includes('invite_not_found')) {
+          throw new Error('Convite não encontrado');
+        } else if (acceptError.message.includes('invite_already_accepted')) {
+          throw new Error('Este convite já foi utilizado');
+        } else if (acceptError.message.includes('invite_expired')) {
+          throw new Error('Este convite expirou');
+        }
+        throw acceptError;
+      }
 
       toast.success('Conta criada com sucesso!', {
         description: 'Verifique seu email para confirmar a conta.',
@@ -191,7 +188,7 @@ export default function AcceptInvite() {
             <CardDescription className="mt-2">
               Você foi convidado para fazer parte da{' '}
               <span className="text-primary font-medium">
-                {invite?.organization?.name || 'barbearia'}
+                {invite?.organization_name || 'barbearia'}
               </span>
             </CardDescription>
           </div>
