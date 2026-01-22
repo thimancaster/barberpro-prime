@@ -66,7 +66,10 @@ export default function AcceptInvite() {
         setInvite(inviteData as InviteData);
       }
     } catch (error) {
-      console.error('Error fetching invite:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching invite:', error);
+      }
       setIsExpired(true);
     } finally {
       setIsLoading(false);

@@ -81,7 +81,10 @@ export default function Equipe() {
 
       setMembers(membersWithRoles);
     } catch (error) {
-      console.error('Error fetching members:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching members:', error);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -68,7 +68,10 @@ export default function Produtos() {
       if (error) throw error;
       setProducts(data || []);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      // Log errors only in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Error fetching products:', error);
+      }
     } finally {
       setIsLoading(false);
     }

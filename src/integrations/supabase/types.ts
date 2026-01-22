@@ -618,6 +618,20 @@ export type Database = {
         Args: { _full_name: string; _token: string }
         Returns: undefined
       }
+      create_organization: {
+        Args: {
+          _closing_time?: string
+          _opening_time?: string
+          _org_address?: string
+          _org_email?: string
+          _org_name: string
+          _org_phone?: string
+          _org_slug: string
+          _user_full_name?: string
+          _user_phone?: string
+        }
+        Returns: string
+      }
       get_invite_public: {
         Args: { _token: string }
         Returns: {
