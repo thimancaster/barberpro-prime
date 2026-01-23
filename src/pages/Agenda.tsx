@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +58,7 @@ interface AppointmentWithRelations extends Appointment {
 }
 
 export default function Agenda() {
+  const navigate = useNavigate();
   const { organization, profile, isAdmin } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
@@ -645,11 +647,11 @@ export default function Agenda() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        handleUpdateStatus(selectedAppointment.id, 'completed');
+                        navigate(`/checkout/${selectedAppointment.id}`);
                         setSelectedAppointment(null);
                       }}
                     >
-                      Finalizar
+                      Finalizar e Cobrar
                     </Button>
                   )}
                 </div>
