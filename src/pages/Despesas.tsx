@@ -97,7 +97,12 @@ export default function Despesas() {
         .order('due_date', { ascending: true });
 
       if (error) throw error;
-      setExpenses(data || []);
+      // Cast the recurrence_type to the proper type
+      const typedData = (data || []).map(expense => ({
+        ...expense,
+        recurrence_type: expense.recurrence_type as 'none' | 'monthly' | 'weekly' | 'yearly'
+      }));
+      setExpenses(typedData);
     } catch (error) {
       // Log errors only in development to prevent information leakage
       if (import.meta.env.DEV) {

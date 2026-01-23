@@ -942,6 +942,20 @@ export type Database = {
         }
         Returns: string
       }
+      create_public_booking: {
+        Args: {
+          _barber_id: string
+          _client_email?: string
+          _client_name: string
+          _client_phone: string
+          _end_time: string
+          _notes?: string
+          _org_slug: string
+          _service_id: string
+          _start_time: string
+        }
+        Returns: Json
+      }
       get_invite_public: {
         Args: { _token: string }
         Returns: {
@@ -953,6 +967,16 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_public_available_times: {
+        Args: {
+          _barber_id: string
+          _date: string
+          _duration_minutes: number
+          _org_slug: string
+        }
+        Returns: Json
+      }
+      get_public_booking_info: { Args: { _org_slug: string }; Returns: Json }
       get_user_organization_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

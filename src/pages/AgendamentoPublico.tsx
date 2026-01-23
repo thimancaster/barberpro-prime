@@ -6,22 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Scissors, 
-  CalendarIcon, 
   Clock, 
-  User,
   Phone,
-  Mail,
   CheckCircle,
   MapPin
 } from 'lucide-react';
-import { format, addMinutes, isBefore, isAfter, setHours, setMinutes, parseISO } from 'date-fns';
+import { format, addMinutes, isBefore, setHours, setMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface Organization {
@@ -29,7 +25,6 @@ interface Organization {
   name: string;
   slug: string;
   phone: string | null;
-  email: string | null;
   address: string | null;
   logo_url: string | null;
   opening_time: string | null;
@@ -52,6 +47,17 @@ interface Barber {
   avatar_url: string | null;
 }
 
+interface WorkingHours {
+  start_time: string;
+  end_time: string;
+  is_working: boolean;
+}
+
+interface AppointmentSlot {
+  start_time: string;
+  end_time: string;
+}
+
 export default function AgendamentoPublico() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -63,7 +69,6 @@ export default function AgendamentoPublico() {
   const [notFound, setNotFound] = useState(false);
 
   // Booking state
-  const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -91,81 +96,89 @@ export default function AgendamentoPublico() {
     }
   }, [organization, selectedDate, selectedBarber, selectedService]);
 
+  // Use secure RPC function to fetch organization data
   const fetchOrganization = async () => {
     setLoading(true);
     try {
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('slug', slug)
-        .single();
+      const { data, error } = await supabase.rpc('get_public_booking_info', {
+        _org_slug: slug
+      });
 
-      if (orgError || !orgData) {
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('Error fetching booking info:', error);
+        }
         setNotFound(true);
         return;
       }
 
-      setOrganization(orgData);
+      if (!data) {
+        setNotFound(true);
+        return;
+      }
 
-      // Fetch services
-      const { data: servicesData } = await supabase
-        .from('services')
-        .select('id, name, description, price, duration_minutes, category')
-        .eq('organization_id', orgData.id)
-        .eq('is_active', true)
-        .order('category, name');
+      // Parse the JSON response with proper type assertion
+      const bookingData = data as unknown as {
+        organization: Organization;
+        services: Service[];
+        barbers: Barber[];
+      };
 
-      if (servicesData) setServices(servicesData);
-
-      // Fetch barbers
-      const { data: barbersData } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .eq('organization_id', orgData.id)
-        .eq('is_active', true)
-        .order('full_name');
-
-      if (barbersData) setBarbers(barbersData);
+      setOrganization(bookingData.organization);
+      setServices(bookingData.services || []);
+      setBarbers(bookingData.barbers || []);
     } catch (error) {
-      console.error('Error fetching organization:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error fetching organization:', error);
+      }
       setNotFound(true);
     } finally {
       setLoading(false);
     }
   };
 
+  // Use secure RPC function to fetch available times
   const fetchAvailableTimes = async () => {
     if (!organization || !selectedDate || !selectedBarber || !selectedService) return;
 
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
-      // Get existing appointments for the barber on this date
-      const { data: appointments } = await supabase
-        .from('appointments')
-        .select('start_time, end_time')
-        .eq('barber_id', selectedBarber.id)
-        .gte('start_time', `${dateStr}T00:00:00`)
-        .lte('start_time', `${dateStr}T23:59:59`)
-        .not('status', 'in', '("cancelled","no_show")');
+      const { data, error } = await supabase.rpc('get_public_available_times', {
+        _org_slug: slug!,
+        _barber_id: selectedBarber.id,
+        _date: dateStr,
+        _duration_minutes: selectedService.duration_minutes
+      });
 
-      // Get barber's working hours for this day
-      const dayOfWeek = selectedDate.getDay();
-      const { data: workingHours } = await supabase
-        .from('working_hours')
-        .select('start_time, end_time, is_working')
-        .eq('profile_id', selectedBarber.id)
-        .eq('day_of_week', dayOfWeek)
-        .single();
-
-      const openingTime = workingHours?.start_time || organization.opening_time || '09:00';
-      const closingTime = workingHours?.end_time || organization.closing_time || '19:00';
-      const isWorking = workingHours?.is_working !== false;
-
-      if (!isWorking) {
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('Error fetching available times:', error);
+        }
         setAvailableTimes([]);
         return;
       }
+
+      if (!data) {
+        setAvailableTimes([]);
+        return;
+      }
+
+      const availabilityData = data as unknown as {
+        working_hours: WorkingHours | null;
+        appointments: AppointmentSlot[];
+      };
+
+      const workingHours = availabilityData.working_hours;
+      const appointments = availabilityData.appointments || [];
+
+      if (!workingHours || workingHours.is_working === false) {
+        setAvailableTimes([]);
+        return;
+      }
+
+      const openingTime = workingHours.start_time || organization.opening_time || '09:00';
+      const closingTime = workingHours.end_time || organization.closing_time || '19:00';
 
       // Generate time slots
       const slots: string[] = [];
@@ -180,7 +193,7 @@ export default function AgendamentoPublico() {
         const slotEnd = addMinutes(current, selectedService.duration_minutes);
 
         // Check if slot conflicts with existing appointments
-        const hasConflict = appointments?.some(apt => {
+        const hasConflict = appointments.some(apt => {
           const aptStart = new Date(apt.start_time);
           const aptEnd = new Date(apt.end_time);
           return (current >= aptStart && current < aptEnd) || 
@@ -200,10 +213,14 @@ export default function AgendamentoPublico() {
 
       setAvailableTimes(slots);
     } catch (error) {
-      console.error('Error fetching available times:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error fetching available times:', error);
+      }
+      setAvailableTimes([]);
     }
   };
 
+  // Use secure RPC function to create booking
   const handleSubmit = async () => {
     if (!selectedService || !selectedBarber || !selectedDate || !selectedTime || !clientName || !clientPhone) {
       toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
@@ -212,62 +229,47 @@ export default function AgendamentoPublico() {
 
     setIsSubmitting(true);
     try {
-      // Create or find client
-      let clientId: string;
-      const { data: existingClient } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('organization_id', organization!.id)
-        .eq('phone', clientPhone)
-        .single();
-
-      if (existingClient) {
-        clientId = existingClient.id;
-      } else {
-        const { data: newClient, error: clientError } = await supabase
-          .from('clients')
-          .insert({
-            organization_id: organization!.id,
-            name: clientName,
-            phone: clientPhone,
-            email: clientEmail || null,
-            notes: clientNotes || null,
-          })
-          .select('id')
-          .single();
-
-        if (clientError) throw clientError;
-        clientId = newClient.id;
-      }
-
-      // Create appointment
       const [hour, min] = selectedTime.split(':').map(Number);
       const startTime = setMinutes(setHours(selectedDate, hour), min);
       const endTime = addMinutes(startTime, selectedService.duration_minutes);
 
-      const { error: aptError } = await supabase
-        .from('appointments')
-        .insert({
-          organization_id: organization!.id,
-          client_id: clientId,
-          barber_id: selectedBarber.id,
-          service_id: selectedService.id,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          price: selectedService.price,
-          status: 'scheduled',
-          notes: clientNotes || null,
-        });
+      const { data, error } = await supabase.rpc('create_public_booking', {
+        _org_slug: slug!,
+        _service_id: selectedService.id,
+        _barber_id: selectedBarber.id,
+        _start_time: startTime.toISOString(),
+        _end_time: endTime.toISOString(),
+        _client_name: clientName.trim(),
+        _client_phone: clientPhone.trim(),
+        _client_email: clientEmail.trim() || null,
+        _notes: clientNotes.trim() || null
+      });
 
-      if (aptError) throw aptError;
+      if (error) {
+        // Handle specific error codes with user-friendly messages
+        const errorMessages: Record<string, string> = {
+          'organization_not_found': 'Barbearia não encontrada',
+          'service_not_found': 'Serviço não disponível',
+          'barber_not_found': 'Profissional não disponível',
+          'time_slot_unavailable': 'Este horário não está mais disponível',
+          'invalid_client_name': 'Nome inválido',
+          'invalid_client_phone': 'Telefone inválido'
+        };
+        
+        const userMessage = errorMessages[error.message] || 'Erro ao realizar agendamento';
+        throw new Error(userMessage);
+      }
 
       setBookingComplete(true);
       toast({ title: 'Agendamento realizado com sucesso!' });
-    } catch (error: any) {
-      console.error('Error submitting booking:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      if (import.meta.env.DEV) {
+        console.error('Error submitting booking:', error);
+      }
       toast({
         title: 'Erro ao agendar',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -321,7 +323,7 @@ export default function AgendamentoPublico() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-8">
-            <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+            <CheckCircle className="w-16 h-16 mx-auto text-emerald-500 mb-4" />
             <h1 className="text-2xl font-bold mb-2">Agendamento Confirmado!</h1>
             <p className="text-muted-foreground mb-6">
               Seu horário foi reservado com sucesso.
@@ -477,6 +479,7 @@ export default function AgendamentoPublico() {
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Seu nome completo"
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -484,11 +487,12 @@ export default function AgendamentoPublico() {
                     <Input
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
-                      placeholder="(00) 00000-0000"
+                      placeholder="(11) 99999-9999"
+                      required
                     />
                   </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>E-mail (opcional)</Label>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
                     <Input
                       type="email"
                       value={clientEmail}
@@ -497,37 +501,45 @@ export default function AgendamentoPublico() {
                     />
                   </div>
                   <div className="space-y-2 sm:col-span-2">
-                    <Label>Observações (opcional)</Label>
+                    <Label>Observações</Label>
                     <Textarea
                       value={clientNotes}
                       onChange={(e) => setClientNotes(e.target.value)}
-                      placeholder="Alguma observação sobre o atendimento..."
+                      placeholder="Alguma observação para o barbeiro?"
+                      rows={3}
                     />
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Summary */}
+            {/* Summary & Submit */}
+            {selectedTime && clientName && clientPhone && (
+              <div className="space-y-4 pt-4 border-t">
                 <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold">Resumo do Agendamento</h4>
+                  <h3 className="font-semibold">Resumo do Agendamento</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-muted-foreground">Serviço:</span>
-                    <span>{selectedService?.name}</span>
-                    <span className="text-muted-foreground">Profissional:</span>
-                    <span>{selectedBarber?.full_name}</span>
-                    <span className="text-muted-foreground">Data:</span>
-                    <span>{format(selectedDate!, 'dd/MM/yyyy', { locale: ptBR })}</span>
-                    <span className="text-muted-foreground">Horário:</span>
-                    <span>{selectedTime}</span>
-                    <span className="text-muted-foreground">Valor:</span>
-                    <span className="font-semibold text-primary">{formatCurrency(selectedService!.price)}</span>
+                    <p className="text-muted-foreground">Serviço:</p>
+                    <p>{selectedService?.name}</p>
+                    <p className="text-muted-foreground">Profissional:</p>
+                    <p>{selectedBarber?.full_name}</p>
+                    <p className="text-muted-foreground">Data:</p>
+                    <p>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</p>
+                    <p className="text-muted-foreground">Horário:</p>
+                    <p className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {selectedTime}
+                    </p>
+                    <p className="text-muted-foreground">Valor:</p>
+                    <p className="font-semibold text-primary">{selectedService && formatCurrency(selectedService.price)}</p>
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full" 
-                  size="lg"
+                <Button
                   onClick={handleSubmit}
-                  disabled={isSubmitting || !clientName || !clientPhone}
+                  disabled={isSubmitting}
+                  className="w-full"
+                  size="lg"
                 >
                   {isSubmitting ? 'Agendando...' : 'Confirmar Agendamento'}
                 </Button>
