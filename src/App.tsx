@@ -25,6 +25,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Integracoes from "./pages/Integracoes";
 import AcceptInvite from "./pages/AcceptInvite";
 import AgendamentoPublico from "./pages/AgendamentoPublico";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
 // Components
@@ -68,6 +69,7 @@ const App = () => (
               >
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/agenda" element={<Agenda />} />
+                <Route path="/checkout/:appointmentId" element={<Checkout />} />
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/servicos" element={<Servicos />} />
                 <Route path="/equipe" element={<Equipe />} />

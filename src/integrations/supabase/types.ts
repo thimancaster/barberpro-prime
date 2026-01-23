@@ -24,6 +24,8 @@ export type Database = {
           id: string
           notes: string | null
           organization_id: string
+          payment_id: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
           price: number
           service_id: string | null
           start_time: string
@@ -39,6 +41,8 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id: string
+          payment_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
           price: number
           service_id?: string | null
           start_time: string
@@ -54,6 +58,8 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id?: string
+          payment_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
           price?: number
           service_id?: string | null
           start_time?: string
@@ -80,6 +86,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
           {
@@ -557,6 +570,188 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_items: {
+        Row: {
+          commission_amount: number | null
+          commission_percentage: number | null
+          created_at: string
+          id: string
+          item_name: string
+          item_type: string
+          organization_id: string
+          payment_id: string
+          product_id: string | null
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          commission_amount?: number | null
+          commission_percentage?: number | null
+          created_at?: string
+          id?: string
+          item_name: string
+          item_type?: string
+          organization_id: string
+          payment_id: string
+          product_id?: string | null
+          quantity?: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          commission_amount?: number | null
+          commission_percentage?: number | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          item_type?: string
+          organization_id?: string
+          payment_id?: string
+          product_id?: string | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_items_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string | null
+          cash_register_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          discount_amount: number
+          discount_percentage: number | null
+          discount_reason: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          payment_details: Json | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          product_commission: number | null
+          service_commission: number | null
+          subtotal: number
+          tip_amount: number
+          total_amount: number
+          total_commission: number | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          cash_register_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          discount_percentage?: number | null
+          discount_reason?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          payment_details?: Json | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          product_commission?: number | null
+          service_commission?: number | null
+          subtotal?: number
+          tip_amount?: number
+          total_amount?: number
+          total_commission?: number | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          cash_register_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          discount_percentage?: number | null
+          discount_reason?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          payment_details?: Json | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          product_commission?: number | null
+          service_commission?: number | null
+          subtotal?: number
+          tip_amount?: number
+          total_amount?: number
+          total_commission?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_sales: {
         Row: {
           barber_id: string | null
@@ -1001,6 +1196,13 @@ export type Database = {
         | "cancelled"
         | "no_show"
       expense_status: "pending" | "paid"
+      payment_method:
+        | "cash"
+        | "pix"
+        | "credit_card"
+        | "debit_card"
+        | "voucher"
+        | "mixed"
       service_category: "cabelo" | "barba" | "combo" | "outros"
       stock_movement_type: "entry" | "exit" | "sale" | "adjustment"
     }
@@ -1140,6 +1342,14 @@ export const Constants = {
         "no_show",
       ],
       expense_status: ["pending", "paid"],
+      payment_method: [
+        "cash",
+        "pix",
+        "credit_card",
+        "debit_card",
+        "voucher",
+        "mixed",
+      ],
       service_category: ["cabelo", "barba", "combo", "outros"],
       stock_movement_type: ["entry", "exit", "sale", "adjustment"],
     },
