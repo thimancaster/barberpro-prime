@@ -296,15 +296,15 @@ export default function AgendamentoPublico() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
+      </main>
     );
   }
 
   if (notFound) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <main className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-8">
             <Scissors className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
@@ -314,13 +314,13 @@ export default function AgendamentoPublico() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   if (bookingComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <main className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-8">
             <CheckCircle className="w-16 h-16 mx-auto text-emerald-500 mb-4" />
@@ -345,12 +345,12 @@ export default function AgendamentoPublico() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground py-8 px-4">
         <div className="max-w-2xl mx-auto text-center">
@@ -548,6 +548,6 @@ export default function AgendamentoPublico() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </main>
   );
 }
