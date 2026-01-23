@@ -361,6 +361,71 @@ export type Database = {
           },
         ]
       }
+      discounts: {
+        Row: {
+          applies_to: Database["public"]["Enums"]["discount_applies_to"]
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          max_discount: number | null
+          min_purchase: number | null
+          name: string
+          organization_id: string
+          times_used: number | null
+          type: Database["public"]["Enums"]["discount_type"]
+          updated_at: string
+          usage_limit: number | null
+          valid_from: string | null
+          valid_until: string | null
+          value: number
+        }
+        Insert: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          min_purchase?: number | null
+          name: string
+          organization_id: string
+          times_used?: number | null
+          type?: Database["public"]["Enums"]["discount_type"]
+          updated_at?: string
+          usage_limit?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+          value: number
+        }
+        Update: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          min_purchase?: number | null
+          name?: string
+          organization_id?: string
+          times_used?: number | null
+          type?: Database["public"]["Enums"]["discount_type"]
+          updated_at?: string
+          usage_limit?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -481,6 +546,229 @@ export type Database = {
           },
         ]
       }
+      loyalty_points: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          points_balance: number | null
+          total_points_earned: number | null
+          total_points_redeemed: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          points_balance?: number | null
+          total_points_earned?: number | null
+          total_points_redeemed?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          points_balance?: number | null
+          total_points_earned?: number | null
+          total_points_redeemed?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_points_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_points_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          points_cost: number
+          product_id: string | null
+          reward_type: string
+          reward_value: number | null
+          service_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          points_cost: number
+          product_id?: string | null
+          reward_type?: string
+          reward_value?: number | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          points_cost?: number
+          product_id?: string | null
+          reward_type?: string
+          reward_value?: number | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_rewards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_settings: {
+        Row: {
+          created_at: string
+          currency_per_point: number | null
+          id: string
+          is_active: boolean | null
+          min_points_redeem: number | null
+          organization_id: string
+          points_expiry_days: number | null
+          points_per_currency: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_per_point?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_points_redeem?: number | null
+          organization_id: string
+          points_expiry_days?: number | null
+          points_per_currency?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_per_point?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_points_redeem?: number | null
+          organization_id?: string
+          points_expiry_days?: number | null
+          points_per_currency?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_transactions: {
+        Row: {
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          loyalty_points_id: string
+          organization_id: string
+          points: number
+          reference_id: string | null
+          reference_type: string | null
+          type: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          loyalty_points_id: string
+          organization_id: string
+          points: number
+          reference_id?: string | null
+          reference_type?: string | null
+          type: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          loyalty_points_id?: string
+          organization_id?: string
+          points?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          type?: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_loyalty_points_id_fkey"
+            columns: ["loyalty_points_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       n8n_integrations: {
         Row: {
           created_at: string
@@ -520,6 +808,130 @@ export type Database = {
             foreignKeyName: "n8n_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_logs: {
+        Row: {
+          appointment_id: string | null
+          client_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          external_id: string | null
+          id: string
+          message_content: string
+          organization_id: string
+          phone_number: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          template_id: string | null
+          trigger: Database["public"]["Enums"]["notification_trigger"]
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          message_content: string
+          organization_id: string
+          phone_number?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          template_id?: string | null
+          trigger: Database["public"]["Enums"]["notification_trigger"]
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          message_content?: string
+          organization_id?: string
+          phone_number?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          template_id?: string | null
+          trigger?: Database["public"]["Enums"]["notification_trigger"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "notification_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          message_template: string
+          name: string
+          organization_id: string
+          send_via_whatsapp: boolean | null
+          trigger: Database["public"]["Enums"]["notification_trigger"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          message_template: string
+          name: string
+          organization_id: string
+          send_via_whatsapp?: boolean | null
+          trigger: Database["public"]["Enums"]["notification_trigger"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          message_template?: string
+          name?: string
+          organization_id?: string
+          send_via_whatsapp?: boolean | null
+          trigger?: Database["public"]["Enums"]["notification_trigger"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -933,6 +1345,164 @@ export type Database = {
           },
         ]
       }
+      promotions: {
+        Row: {
+          applies_to: Database["public"]["Enums"]["discount_applies_to"]
+          created_at: string
+          days_of_week: number[] | null
+          description: string | null
+          end_time: string | null
+          for_new_clients_only: boolean | null
+          id: string
+          is_active: boolean | null
+          min_purchase: number | null
+          name: string
+          organization_id: string
+          priority: number | null
+          start_time: string | null
+          type: Database["public"]["Enums"]["discount_type"]
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+          value: number
+        }
+        Insert: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          created_at?: string
+          days_of_week?: number[] | null
+          description?: string | null
+          end_time?: string | null
+          for_new_clients_only?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          min_purchase?: number | null
+          name: string
+          organization_id: string
+          priority?: number | null
+          start_time?: string | null
+          type?: Database["public"]["Enums"]["discount_type"]
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          value: number
+        }
+        Update: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          created_at?: string
+          days_of_week?: number[] | null
+          description?: string | null
+          end_time?: string | null
+          for_new_clients_only?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          min_purchase?: number | null
+          name?: string
+          organization_id?: string
+          priority?: number | null
+          start_time?: string | null
+          type?: Database["public"]["Enums"]["discount_type"]
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string | null
+          client_id: string | null
+          comment: string | null
+          created_at: string
+          id: string
+          is_public: boolean | null
+          nps_score: number | null
+          organization_id: string
+          rating: number
+          response: string | null
+          response_at: string | null
+          response_by: string | null
+          token: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          client_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_public?: boolean | null
+          nps_score?: number | null
+          organization_id: string
+          rating: number
+          response?: string | null
+          response_at?: string | null
+          response_by?: string | null
+          token?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          client_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_public?: boolean | null
+          nps_score?: number | null
+          organization_id?: string
+          rating?: number
+          response?: string | null
+          response_at?: string | null
+          response_by?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_response_by_fkey"
+            columns: ["response_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           category: Database["public"]["Enums"]["service_category"] | null
@@ -1195,7 +1765,25 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "no_show"
+      discount_applies_to: "services" | "products" | "all"
+      discount_type: "percentage" | "fixed"
       expense_status: "pending" | "paid"
+      loyalty_transaction_type:
+        | "earned"
+        | "redeemed"
+        | "expired"
+        | "bonus"
+        | "adjustment"
+      notification_status: "pending" | "sent" | "delivered" | "failed" | "read"
+      notification_trigger:
+        | "appointment_created"
+        | "appointment_confirmed"
+        | "appointment_reminder_1h"
+        | "appointment_reminder_24h"
+        | "appointment_completed"
+        | "review_request"
+        | "loyalty_points_earned"
+        | "birthday"
       payment_method:
         | "cash"
         | "pix"
@@ -1341,7 +1929,27 @@ export const Constants = {
         "cancelled",
         "no_show",
       ],
+      discount_applies_to: ["services", "products", "all"],
+      discount_type: ["percentage", "fixed"],
       expense_status: ["pending", "paid"],
+      loyalty_transaction_type: [
+        "earned",
+        "redeemed",
+        "expired",
+        "bonus",
+        "adjustment",
+      ],
+      notification_status: ["pending", "sent", "delivered", "failed", "read"],
+      notification_trigger: [
+        "appointment_created",
+        "appointment_confirmed",
+        "appointment_reminder_1h",
+        "appointment_reminder_24h",
+        "appointment_completed",
+        "review_request",
+        "loyalty_points_earned",
+        "birthday",
+      ],
       payment_method: [
         "cash",
         "pix",
