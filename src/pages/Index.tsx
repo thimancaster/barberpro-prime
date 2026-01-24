@@ -132,8 +132,7 @@ const Index = () => {
             </h1>
             
             <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto text-destructive-foreground">
-              Gerencie agendamentos, clientes, equipe e finanças em um só lugar. 
-              Eleve sua barbearia ao próximo nível com tecnologia de ponta.
+              Gerencie agendamentos, clientes, equipe e finanças em um só lugar. Eleve sua barbearia ao próximo nível com tecnologia de ponta.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
