@@ -50,6 +50,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useRealtimeAppointments } from '@/hooks/useRealtimeAppointments';
+import { WaitingQueue } from '@/components/agenda/WaitingQueue';
 
 interface AppointmentWithRelations extends Appointment {
   client: Client | null;
@@ -275,8 +276,19 @@ export default function Agenda() {
     });
   };
 
+  const handleCheckout = (id: string) => {
+    navigate(`/checkout/${id}`);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Waiting Queue - sempre visível */}
+      <WaitingQueue
+        appointments={appointments}
+        onUpdateStatus={handleUpdateStatus}
+        onCheckout={handleCheckout}
+      />
+
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

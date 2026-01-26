@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, TrendingUp, TrendingDown, DollarSign, Users, Calendar, Package } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, DollarSign, Users, Calendar, Package, CreditCard, Tag, Star } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -82,6 +82,16 @@ export default function Relatorios() {
   // Products data
   const [lowStockProducts, setLowStockProducts] = useState<ProductSalesData[]>([]);
 
+  // Advanced reports data (Fase 7)
+  const [paymentMethods, setPaymentMethods] = useState<CategoryData[]>([]);
+  const [discountUsage, setDiscountUsage] = useState<{ name: string; count: number; totalDiscount: number }[]>([]);
+  const [loyaltyStats, setLoyaltyStats] = useState<{
+    totalPoints: number;
+    totalRedeemed: number;
+    activeMembers: number;
+    pointsPerMonth: { month: string; earned: number; redeemed: number }[];
+  }>({ totalPoints: 0, totalRedeemed: 0, activeMembers: 0, pointsPerMonth: [] });
+
   useEffect(() => {
     if (organization?.id) {
       fetchAllData();
@@ -102,6 +112,7 @@ export default function Relatorios() {
         fetchAppointmentsData(startDate, endDate),
         fetchClientsData(startDate, months),
         fetchProductsData(),
+        fetchAdvancedData(startDate, endDate, months),
       ]);
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -291,6 +302,103 @@ export default function Relatorios() {
     setLowStockProducts(lowStock);
   };
 
+  const fetchAdvancedData = async (startDate: Date, endDate: Date, months: number) => {
+    // Fetch payment methods distribution
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('payment_method, total_amount, discount_amount, discount_reason')
+      .eq('organization_id', organization!.id)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString());
+
+    // Payment methods breakdown
+    const methodMap = new Map<string, number>();
+    const PAYMENT_LABELS: Record<string, string> = {
+      cash: 'Dinheiro',
+      pix: 'PIX',
+      credit_card: 'Crédito',
+      debit_card: 'Débito',
+      voucher: 'Voucher',
+      mixed: 'Dividido',
+    };
+    
+    payments?.forEach((p) => {
+      const label = PAYMENT_LABELS[p.payment_method] || p.payment_method;
+      methodMap.set(label, (methodMap.get(label) || 0) + Number(p.total_amount));
+    });
+
+    setPaymentMethods(
+      Array.from(methodMap.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+    );
+
+    // Discount usage
+    const discountMap = new Map<string, { count: number; totalDiscount: number }>();
+    payments?.forEach((p) => {
+      if (p.discount_amount > 0 && p.discount_reason) {
+        const reason = p.discount_reason.length > 30 ? p.discount_reason.slice(0, 30) + '...' : p.discount_reason;
+        const current = discountMap.get(reason) || { count: 0, totalDiscount: 0 };
+        current.count += 1;
+        current.totalDiscount += Number(p.discount_amount);
+        discountMap.set(reason, current);
+      }
+    });
+
+    setDiscountUsage(
+      Array.from(discountMap.entries())
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => b.totalDiscount - a.totalDiscount)
+        .slice(0, 10)
+    );
+
+    // Loyalty statistics
+    const { data: loyaltyPoints } = await supabase
+      .from('loyalty_points')
+      .select('points_balance, total_points_earned, total_points_redeemed')
+      .eq('organization_id', organization!.id);
+
+    const { data: loyaltyTransactions } = await supabase
+      .from('loyalty_transactions')
+      .select('type, points, created_at')
+      .eq('organization_id', organization!.id)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString());
+
+    const totalPoints = loyaltyPoints?.reduce((sum, p) => sum + (p.total_points_earned || 0), 0) || 0;
+    const totalRedeemed = loyaltyPoints?.reduce((sum, p) => sum + (p.total_points_redeemed || 0), 0) || 0;
+    const activeMembers = loyaltyPoints?.filter((p) => (p.points_balance || 0) > 0).length || 0;
+
+    // Points per month
+    const pointsMonthMap = new Map<string, { earned: number; redeemed: number }>();
+    for (let i = 0; i < months; i++) {
+      const month = format(subMonths(new Date(), months - 1 - i), 'MMM/yy', { locale: ptBR });
+      pointsMonthMap.set(month, { earned: 0, redeemed: 0 });
+    }
+
+    loyaltyTransactions?.forEach((t) => {
+      const month = format(new Date(t.created_at), 'MMM/yy', { locale: ptBR });
+      const current = pointsMonthMap.get(month);
+      if (current) {
+        if (t.type === 'earned' || t.type === 'bonus') {
+          current.earned += t.points;
+        } else if (t.type === 'redeemed') {
+          current.redeemed += Math.abs(t.points);
+        }
+      }
+    });
+
+    setLoyaltyStats({
+      totalPoints,
+      totalRedeemed,
+      activeMembers,
+      pointsPerMonth: Array.from(pointsMonthMap.entries()).map(([month, data]) => ({
+        month,
+        ...data,
+      })),
+    });
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -385,7 +493,7 @@ export default function Relatorios() {
 
       {/* Tabs */}
       <Tabs defaultValue="finance" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="finance" className="gap-2">
             <DollarSign className="w-4 h-4" />
             Financeiro
@@ -397,6 +505,10 @@ export default function Relatorios() {
           <TabsTrigger value="clients" className="gap-2">
             <Users className="w-4 h-4" />
             Clientes
+          </TabsTrigger>
+          <TabsTrigger value="advanced" className="gap-2">
+            <Star className="w-4 h-4" />
+            Avançado
           </TabsTrigger>
         </TabsList>
 
@@ -626,6 +738,152 @@ export default function Relatorios() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Advanced Tab - Fase 7 */}
+        <TabsContent value="advanced" className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="card-gradient border-border/50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Membros Fidelidade</p>
+                    <p className="text-2xl font-bold text-primary">{loyaltyStats.activeMembers}</p>
+                  </div>
+                  <Star className="w-8 h-8 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="card-gradient border-border/50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pontos Distribuídos</p>
+                    <p className="text-2xl font-bold text-success">{loyaltyStats.totalPoints.toLocaleString()}</p>
+                  </div>
+                  <TrendingUp className="w-8 h-8 text-success" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="card-gradient border-border/50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pontos Resgatados</p>
+                    <p className="text-2xl font-bold text-chart-2">{loyaltyStats.totalRedeemed.toLocaleString()}</p>
+                  </div>
+                  <Tag className="w-8 h-8 text-chart-2" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Payment Methods */}
+            <Card className="card-gradient border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg font-display flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Formas de Pagamento
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={paymentMethods}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {paymentMethods.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Discount Usage */}
+            <Card className="card-gradient border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg font-display flex items-center gap-2">
+                  <Tag className="w-5 h-5" />
+                  Uso de Descontos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {discountUsage.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum desconto utilizado no período
+                  </div>
+                ) : (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={discountUsage} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis type="number" tickFormatter={(v) => `R$${v}`} className="text-xs" />
+                        <YAxis type="category" dataKey="name" width={120} className="text-xs" />
+                        <Tooltip
+                          formatter={(value: number, name: string) => [
+                            name === 'totalDiscount' ? formatCurrency(value) : value,
+                            name === 'totalDiscount' ? 'Total Descontado' : 'Usos'
+                          ]}
+                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                        />
+                        <Bar dataKey="totalDiscount" name="Total" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Loyalty Points Evolution */}
+            <Card className="card-gradient border-border/50 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg font-display flex items-center gap-2">
+                  <Star className="w-5 h-5" />
+                  Evolução do Programa de Fidelidade
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loyaltyStats.pointsPerMonth.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma atividade de fidelidade no período
+                  </div>
+                ) : (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={loyaltyStats.pointsPerMonth}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="month" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                        />
+                        <Legend />
+                        <Bar dataKey="earned" name="Pontos Ganhos" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="redeemed" name="Pontos Resgatados" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

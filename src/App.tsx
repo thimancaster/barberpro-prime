@@ -26,6 +26,10 @@ import Integracoes from "./pages/Integracoes";
 import AcceptInvite from "./pages/AcceptInvite";
 import AgendamentoPublico from "./pages/AgendamentoPublico";
 import Checkout from "./pages/Checkout";
+import Descontos from "./pages/Descontos";
+import Fidelidade from "./pages/Fidelidade";
+import Notificacoes from "./pages/Notificacoes";
+import Avaliacoes from "./pages/Avaliacoes";
 import NotFound from "./pages/NotFound";
 
 // Components
@@ -79,6 +83,10 @@ const App = () => (
                 <Route path="/comissoes" element={<Comissoes />} />
                 <Route path="/relatorios" element={<Relatorios />} />
                 <Route path="/despesas" element={<Despesas />} />
+                <Route path="/descontos" element={<Descontos />} />
+                <Route path="/fidelidade" element={<Fidelidade />} />
+                <Route path="/notificacoes" element={<Notificacoes />} />
+                <Route path="/avaliacoes" element={<Avaliacoes />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
                 <Route path="/integracoes" element={<Integracoes />} />
               </Route>
