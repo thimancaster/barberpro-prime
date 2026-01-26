@@ -235,17 +235,21 @@ export default function Equipe() {
                   </div>
 
                   <div className="space-y-2 text-sm">
-                    {member.phone && (
+                    {/* Phone number: Only visible to admins to protect staff privacy */}
+                    {isAdmin && member.phone && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="w-4 h-4" />
                         {member.phone}
                       </div>
                     )}
-                    <div className="flex items-center justify-between pt-2 border-t border-border">
-                      <span className="text-muted-foreground">Comissão</span>
-                      <span className="font-medium text-primary">{member.commission_percentage}%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
+                    {/* Commission: Only visible to admins to prevent disputes */}
+                    {isAdmin && (
+                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                        <span className="text-muted-foreground">Comissão</span>
+                        <span className="font-medium text-primary">{member.commission_percentage}%</span>
+                      </div>
+                    )}
+                    <div className={`flex items-center justify-between ${isAdmin ? '' : 'pt-2 border-t border-border'}`}>
                       <span className="text-muted-foreground">Status</span>
                       <Badge variant={member.is_active ? 'default' : 'secondary'}>
                         {member.is_active ? 'Ativo' : 'Inativo'}
