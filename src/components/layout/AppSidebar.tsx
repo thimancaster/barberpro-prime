@@ -11,6 +11,10 @@ import {
   Webhook,
   LogOut,
   BarChart3,
+  Tag,
+  Star,
+  Bell,
+  MessageSquare,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +50,13 @@ const financeNavItems = [
   { title: 'Comissões', url: '/comissoes', icon: Users },
   { title: 'Despesas', url: '/despesas', icon: Receipt },
   { title: 'Relatórios', url: '/relatorios', icon: BarChart3 },
+];
+
+const marketingNavItems = [
+  { title: 'Descontos', url: '/descontos', icon: Tag },
+  { title: 'Fidelidade', url: '/fidelidade', icon: Star },
+  { title: 'Notificações', url: '/notificacoes', icon: Bell },
+  { title: 'Avaliações', url: '/avaliacoes', icon: MessageSquare },
 ];
 
 const configNavItems = [
@@ -127,6 +138,35 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {financeNavItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      tooltip={item.title}
+                    >
+                      <NavLink
+                        to={item.url}
+                        className="flex items-center gap-3"
+                        activeClassName="bg-sidebar-accent text-primary"
+                      >
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Marketing Navigation - Admin only */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Marketing</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {marketingNavItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild

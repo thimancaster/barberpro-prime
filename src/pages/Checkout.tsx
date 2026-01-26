@@ -14,8 +14,12 @@ import {
   CheckoutPayment,
   CheckoutTotal,
 } from '@/components/checkout';
+import { DiscountCoupon } from '@/components/checkout/DiscountCoupon';
+import { LoyaltyWidget } from '@/components/checkout/LoyaltyWidget';
+import { ClientHistory } from '@/components/checkout/ClientHistory';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import type { Appointment, Client, Service, Profile } from '@/types/database';
+import type { LoyaltyReward } from '@/types/phases';
 
 interface AppointmentWithRelations extends Appointment {
   client: Client | null;
@@ -34,6 +38,38 @@ export default function Checkout() {
   const [hasOpenRegister, setHasOpenRegister] = useState(false);
 
   const checkout = useCheckout({ appointment });
+  const [appliedCoupon, setAppliedCoupon] = useState<{ name: string; code?: string } | null>(null);
+
+  const handleApplyCouponDiscount = (discount: { type: 'percentage' | 'fixed'; value: number; name: string; code?: string }) => {
+    if (discount.type === 'percentage') {
+      checkout.setDiscountType('percentage');
+      checkout.setDiscountPercentage(discount.value);
+      checkout.setDiscountAmount(0);
+    } else {
+      checkout.setDiscountType('fixed');
+      checkout.setDiscountAmount(discount.value);
+      checkout.setDiscountPercentage(0);
+    }
+    checkout.setDiscountReason(discount.code ? `Cupom: ${discount.code}` : `Promoção: ${discount.name}`);
+    setAppliedCoupon({ name: discount.name, code: discount.code });
+  };
+
+  const handleRemoveCouponDiscount = () => {
+    checkout.setDiscountType('fixed');
+    checkout.setDiscountAmount(0);
+    checkout.setDiscountPercentage(0);
+    checkout.setDiscountReason('');
+    setAppliedCoupon(null);
+  };
+
+  const handleRedeemReward = (reward: LoyaltyReward) => {
+    if (reward.reward_type === 'discount' && reward.reward_value) {
+      checkout.setDiscountType('fixed');
+      checkout.setDiscountAmount(reward.reward_value);
+      checkout.setDiscountReason(`Resgate fidelidade: ${reward.name}`);
+      setAppliedCoupon({ name: reward.name });
+    }
+  };
 
   useEffect(() => {
     if (appointmentId && organization?.id) {
@@ -188,6 +224,29 @@ export default function Checkout() {
             productsTotal={checkout.productsTotal}
           />
 
+          {/* Cupons e Fidelidade */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {organization?.id && (
+              <DiscountCoupon
+                organizationId={organization.id}
+                clientId={appointment.client_id || undefined}
+                subtotal={checkout.subtotal}
+                onApplyDiscount={handleApplyCouponDiscount}
+                onRemoveDiscount={handleRemoveCouponDiscount}
+                appliedDiscount={appliedCoupon}
+              />
+            )}
+            
+            {organization?.id && appointment.client_id && (
+              <LoyaltyWidget
+                organizationId={organization.id}
+                clientId={appointment.client_id}
+                subtotal={checkout.subtotal}
+                onRedeemReward={handleRedeemReward}
+              />
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CheckoutDiscount
               discountType={checkout.discountType}
@@ -222,9 +281,9 @@ export default function Checkout() {
           />
         </div>
 
-        {/* Right Column - Total */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-6">
+        {/* Right Column - Total + Client History */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="sticky top-6 space-y-6">
             <CheckoutTotal
               serviceTotal={checkout.serviceTotal}
               productsTotal={checkout.productsTotal}
@@ -242,6 +301,10 @@ export default function Checkout() {
               onNotesChange={checkout.setNotes}
               onProcessCheckout={handleProcessCheckout}
             />
+            
+            {organization?.id && appointment.client_id && (
+              <ClientHistory clientId={appointment.client_id} organizationId={organization.id} />
+            )}
           </div>
         </div>
       </div>
