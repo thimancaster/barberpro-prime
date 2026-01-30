@@ -30,7 +30,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 export default function Clientes() {
-  const { organization } = useAuth();
+  const { organization, isAdmin } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -181,16 +181,17 @@ export default function Clientes() {
             />
           </div>
 
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Novo Cliente
-              </Button>
-            </DialogTrigger>
+          {isAdmin && (
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Novo Cliente
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle className="font-display">
@@ -257,6 +258,7 @@ export default function Clientes() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         {/* Clients Table */}
@@ -272,7 +274,7 @@ export default function Clientes() {
                 <p className="text-muted-foreground">
                   {searchQuery ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
                 </p>
-                {!searchQuery && (
+                {!searchQuery && isAdmin && (
                   <Button
                     variant="link"
                     className="mt-2 text-primary"
@@ -291,7 +293,7 @@ export default function Clientes() {
                     <TableHead className="text-center">Visitas</TableHead>
                     <TableHead className="text-right">Total Gasto</TableHead>
                     <TableHead>Última Visita</TableHead>
-                    <TableHead className="w-[100px]"></TableHead>
+                    {isAdmin && <TableHead className="w-[100px]"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -332,25 +334,27 @@ export default function Clientes() {
                           ? format(new Date(client.last_visit_at), "dd/MM/yyyy", { locale: ptBR })
                           : '-'}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(client)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => handleDelete(client)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(client)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => handleDelete(client)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

@@ -18,21 +18,23 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, UserRole } from '@/types/database';
-import { Search, UserCircle, Phone, Loader2, Edit, Copy, Plus, Check, Clock, HelpCircle } from 'lucide-react';
+import { Search, UserCircle, Phone, Loader2, Edit, Copy, Plus, Check, Clock, HelpCircle, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import WorkingHoursDialog from '@/components/equipe/WorkingHoursDialog';
+import CreateMemberDialog from '@/components/equipe/CreateMemberDialog';
 
 interface TeamMember extends Profile {
   role?: UserRole;
 }
 
 export default function Equipe() {
-  const { organization, isAdmin } = useAuth();
+  const { organization, isAdmin, profile } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isCreateMemberOpen, setIsCreateMemberOpen] = useState(false);
   const [isWorkingHoursOpen, setIsWorkingHoursOpen] = useState(false);
   const [selectedMemberForHours, setSelectedMemberForHours] = useState<TeamMember | null>(null);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -179,9 +181,14 @@ export default function Equipe() {
       .slice(0, 2);
   };
 
-  const filteredMembers = members.filter((member) =>
-    member.full_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter members: admins see all, barbers see only themselves
+  const filteredMembers = members.filter((member) => {
+    const matchesSearch = member.full_name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!isAdmin && profile?.id) {
+      return matchesSearch && member.id === profile.id;
+    }
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -199,10 +206,16 @@ export default function Equipe() {
           </div>
 
           {isAdmin && (
-            <Button className="gap-2" onClick={handleGenerateInvite}>
-              <Plus className="w-4 h-4" />
-              Convidar Membro
-            </Button>
+            <div className="flex gap-2">
+              <Button className="gap-2" onClick={() => setIsCreateMemberOpen(true)}>
+                <UserPlus className="w-4 h-4" />
+                Cadastrar Membro
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={handleGenerateInvite}>
+                <Plus className="w-4 h-4" />
+                Link de Convite
+              </Button>
+            </div>
           )}
         </div>
 
@@ -423,6 +436,13 @@ export default function Equipe() {
             profileName={selectedMemberForHours.full_name}
           />
         )}
+
+        {/* Create Member Dialog */}
+        <CreateMemberDialog
+          open={isCreateMemberOpen}
+          onOpenChange={setIsCreateMemberOpen}
+          onSuccess={fetchMembers}
+        />
       </div>
     </div>
   );
