@@ -25,6 +25,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Integracoes from "./pages/Integracoes";
 import AcceptInvite from "./pages/AcceptInvite";
 import AgendamentoPublico from "./pages/AgendamentoPublico";
+import AvaliacaoPublica from "./pages/AvaliacaoPublica";
 import Checkout from "./pages/Checkout";
 import Descontos from "./pages/Descontos";
 import Fidelidade from "./pages/Fidelidade";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/convite/:token" element={<AcceptInvite />} />
               <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
+              <Route path="/avaliacao/:token" element={<AvaliacaoPublica />} />
               
               {/* Onboarding - requires auth but no organization */}
               <Route
