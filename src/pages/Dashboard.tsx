@@ -4,16 +4,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Appointment, Client, Service, Profile, Product } from '@/types/database';
+import { Appointment, Client, Service, Profile } from '@/types/database';
 import {
   DollarSign,
   Users,
   Calendar,
-  Clock,
   TrendingUp,
   AlertTriangle,
   ChevronRight,
   Scissors,
+  Percent,
+  ShoppingBag,
+  Plus,
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,6 +27,7 @@ interface DashboardStats {
   todayAppointments: number;
   totalClients: number;
   lowStockProducts: number;
+  pendingCommissions: number;
 }
 
 interface UpcomingAppointment extends Appointment {
@@ -34,7 +37,7 @@ interface UpcomingAppointment extends Appointment {
 }
 
 export default function Dashboard() {
-  const { profile, organization, isAdmin } = useAuth();
+  const { profile, organization, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     todayRevenue: 0,
@@ -42,6 +45,7 @@ export default function Dashboard() {
     todayAppointments: 0,
     totalClients: 0,
     lowStockProducts: 0,
+    pendingCommissions: 0,
   });
   const [upcomingAppointments, setUpcomingAppointments] = useState<UpcomingAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,8 +107,80 @@ export default function Dashboard() {
           .eq('is_active', true);
 
         lowStockCount = lowStockProducts?.filter(
-          (p) => p.quantity <= p.min_quantity
+          (p) => (p.quantity ?? 0) <= (p.min_quantity ?? 0)
         ).length || 0;
+      }
+
+      // Fetch pending commissions for this month
+      let pendingCommissions = 0;
+      if (isAdmin) {
+        // Sum all completed appointments commissions
+        const { data: commissionData } = await supabase
+          .from('appointments')
+          .select('commission_amount')
+          .eq('organization_id', organization.id)
+          .eq('status', 'completed')
+          .gte('start_time', monthStart)
+          .lte('start_time', monthEnd);
+
+        const totalServiceCommissions = commissionData?.reduce(
+          (sum, a) => sum + Number(a.commission_amount || 0), 0
+        ) || 0;
+
+        // Sum product sales commissions
+        const { data: productCommissions } = await supabase
+          .from('product_sales')
+          .select('commission_amount')
+          .eq('organization_id', organization.id)
+          .gte('created_at', monthStart)
+          .lte('created_at', monthEnd);
+
+        const totalProductCommissions = productCommissions?.reduce(
+          (sum, s) => sum + Number(s.commission_amount || 0), 0
+        ) || 0;
+
+        // Subtract paid commissions
+        const { data: paidCommissions } = await supabase
+          .from('commission_payments')
+          .select('total_commission')
+          .eq('organization_id', organization.id)
+          .eq('status', 'paid')
+          .gte('period_start', format(startOfMonth(today), 'yyyy-MM-dd'))
+          .lte('period_end', format(endOfMonth(today), 'yyyy-MM-dd'));
+
+        const totalPaid = paidCommissions?.reduce(
+          (sum, p) => sum + Number(p.total_commission || 0), 0
+        ) || 0;
+
+        pendingCommissions = totalServiceCommissions + totalProductCommissions - totalPaid;
+      } else if (user?.id) {
+        // For barbers, show their own pending commissions
+        const { data: myCommissions } = await supabase
+          .from('appointments')
+          .select('commission_amount')
+          .eq('organization_id', organization.id)
+          .eq('barber_id', user.id)
+          .eq('status', 'completed')
+          .gte('start_time', monthStart)
+          .lte('start_time', monthEnd);
+
+        const myServiceCommissions = myCommissions?.reduce(
+          (sum, a) => sum + Number(a.commission_amount || 0), 0
+        ) || 0;
+
+        const { data: myProductCommissions } = await supabase
+          .from('product_sales')
+          .select('commission_amount')
+          .eq('organization_id', organization.id)
+          .eq('barber_id', user.id)
+          .gte('created_at', monthStart)
+          .lte('created_at', monthEnd);
+
+        const myProductTotal = myProductCommissions?.reduce(
+          (sum, s) => sum + Number(s.commission_amount || 0), 0
+        ) || 0;
+
+        pendingCommissions = myServiceCommissions + myProductTotal;
       }
 
       setStats({
@@ -113,6 +189,7 @@ export default function Dashboard() {
         todayAppointments: todayCount,
         totalClients: clientCount || 0,
         lowStockProducts: lowStockCount,
+        pendingCommissions: Math.max(0, pendingCommissions),
       });
 
       // Fetch upcoming appointments
@@ -132,7 +209,6 @@ export default function Dashboard() {
 
       setUpcomingAppointments((upcoming as UpcomingAppointment[]) || []);
     } catch (error) {
-      // Log errors only in development to prevent information leakage
       if (import.meta.env.DEV) {
         console.error('Error fetching dashboard data:', error);
       }
@@ -182,10 +258,16 @@ export default function Dashboard() {
               Veja o resumo da sua barbearia hoje
             </p>
           </div>
-          <Button onClick={() => navigate('/agenda')} className="gap-2">
-            <Calendar className="w-4 h-4" />
-            Ver Agenda
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/vendas')} className="gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              Registrar Venda
+            </Button>
+            <Button onClick={() => navigate('/agenda')} className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Ver Agenda
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -224,22 +306,27 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="card-gradient border-border/50">
+          <Card 
+            className="card-gradient border-border/50 cursor-pointer hover:border-primary/30 transition-colors"
+            onClick={() => navigate('/comissoes')}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total de Clientes
+                {isAdmin ? 'Comissões Pendentes' : 'Minhas Comissões'}
               </CardTitle>
-              <Users className="w-4 h-4 text-info" />
+              <Percent className="w-4 h-4 text-info" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalClients}</div>
+              <div className="text-2xl font-bold text-info">
+                {formatCurrency(stats.pendingCommissions)}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                clientes cadastrados
+                {isAdmin ? 'a pagar este mês' : 'a receber este mês'}
               </p>
             </CardContent>
           </Card>
 
-          {isAdmin && (
+          {isAdmin ? (
             <Card className={`card-gradient border-border/50 ${stats.lowStockProducts > 0 ? 'border-warning/50' : ''}`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -256,8 +343,41 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
+          ) : (
+            <Card className="card-gradient border-border/50">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total de Clientes
+                </CardTitle>
+                <Users className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalClients}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  clientes cadastrados
+                </p>
+              </CardContent>
+            </Card>
           )}
         </div>
+
+        {/* Quick Actions for Admin */}
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/produtos')}>
+              <Plus className="w-4 h-4 mr-1" />
+              Adicionar Produto
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/servicos')}>
+              <Plus className="w-4 h-4 mr-1" />
+              Adicionar Serviço
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/clientes')}>
+              <Plus className="w-4 h-4 mr-1" />
+              Cadastrar Cliente
+            </Button>
+          </div>
+        )}
 
         {/* Upcoming Appointments */}
         <Card className="card-gradient border-border/50">
@@ -313,7 +433,7 @@ export default function Dashboard() {
                           {format(new Date(appointment.start_time), "dd 'de' MMM", { locale: ptBR })}
                         </p>
                       </div>
-                      {getStatusBadge(appointment.status)}
+                      {getStatusBadge(appointment.status || 'scheduled')}
                     </div>
                   </div>
                 ))}

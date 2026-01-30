@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -17,8 +18,9 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, UserRole } from '@/types/database';
-import { Search, UserCircle, Phone, Loader2, Edit, Mail, Link2, Copy, Plus, Check } from 'lucide-react';
+import { Search, UserCircle, Phone, Loader2, Edit, Copy, Plus, Check, Clock, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import WorkingHoursDialog from '@/components/equipe/WorkingHoursDialog';
 
 interface TeamMember extends Profile {
   role?: UserRole;
@@ -31,6 +33,8 @@ export default function Equipe() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isWorkingHoursOpen, setIsWorkingHoursOpen] = useState(false);
+  const [selectedMemberForHours, setSelectedMemberForHours] = useState<TeamMember | null>(null);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
@@ -40,6 +44,7 @@ export default function Equipe() {
     full_name: '',
     phone: '',
     commission_percentage: '0',
+    product_commission_percentage: '0',
     is_active: true,
   });
 
@@ -81,7 +86,6 @@ export default function Equipe() {
 
       setMembers(membersWithRoles);
     } catch (error) {
-      // Log errors only in development to prevent information leakage
       if (import.meta.env.DEV) {
         console.error('Error fetching members:', error);
       }
@@ -102,6 +106,7 @@ export default function Equipe() {
           full_name: formData.full_name,
           phone: formData.phone || null,
           commission_percentage: parseFloat(formData.commission_percentage),
+          product_commission_percentage: parseFloat(formData.product_commission_percentage),
           is_active: formData.is_active,
         })
         .eq('id', editingMember.id);
@@ -123,10 +128,16 @@ export default function Equipe() {
     setFormData({
       full_name: member.full_name,
       phone: member.phone || '',
-      commission_percentage: member.commission_percentage.toString(),
+      commission_percentage: (member.commission_percentage ?? 0).toString(),
+      product_commission_percentage: (member.product_commission_percentage ?? 0).toString(),
       is_active: member.is_active,
     });
     setIsDialogOpen(true);
+  };
+
+  const handleOpenWorkingHours = (member: TeamMember) => {
+    setSelectedMemberForHours(member);
+    setIsWorkingHoursOpen(true);
   };
 
   const handleGenerateInvite = async () => {
@@ -144,7 +155,7 @@ export default function Equipe() {
 
       if (error) throw error;
 
-      const link = `${window.location.origin}/invite/${data.token}`;
+      const link = `${window.location.origin}/convite/${data.token}`;
       setInviteLink(link);
       setIsInviteDialogOpen(true);
     } catch (error: any) {
@@ -228,26 +239,40 @@ export default function Equipe() {
                       </div>
                     </div>
                     {isAdmin && (
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(member)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenWorkingHours(member)}>
+                              <Clock className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Horários de trabalho</TooltipContent>
+                        </Tooltip>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(member)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
 
                   <div className="space-y-2 text-sm">
-                    {/* Phone number: Only visible to admins to protect staff privacy */}
                     {isAdmin && member.phone && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="w-4 h-4" />
                         {member.phone}
                       </div>
                     )}
-                    {/* Commission: Only visible to admins to prevent disputes */}
                     {isAdmin && (
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
-                        <span className="text-muted-foreground">Comissão</span>
-                        <span className="font-medium text-primary">{member.commission_percentage}%</span>
-                      </div>
+                      <>
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                          <span className="text-muted-foreground">Comissão Serviços</span>
+                          <span className="font-medium text-primary">{member.commission_percentage ?? 0}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Comissão Produtos</span>
+                          <span className="font-medium text-primary">{member.product_commission_percentage ?? 0}%</span>
+                        </div>
+                      </>
                     )}
                     <div className={`flex items-center justify-between ${isAdmin ? '' : 'pt-2 border-t border-border'}`}>
                       <span className="text-muted-foreground">Status</span>
@@ -288,14 +313,50 @@ export default function Equipe() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Comissão (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.commission_percentage}
-                  onChange={(e) => setFormData({ ...formData, commission_percentage: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    Comissão Serviços (%)
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Percentual de comissão sobre o valor dos serviços prestados
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={formData.commission_percentage}
+                    onChange={(e) => setFormData({ ...formData, commission_percentage: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    Comissão Produtos (%)
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Percentual de comissão sobre vendas de produtos
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={formData.product_commission_percentage}
+                    onChange={(e) => setFormData({ ...formData, product_commission_percentage: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -352,6 +413,16 @@ export default function Equipe() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Working Hours Dialog */}
+        {selectedMemberForHours && (
+          <WorkingHoursDialog
+            open={isWorkingHoursOpen}
+            onOpenChange={setIsWorkingHoursOpen}
+            profileId={selectedMemberForHours.id}
+            profileName={selectedMemberForHours.full_name}
+          />
+        )}
       </div>
     </div>
   );
