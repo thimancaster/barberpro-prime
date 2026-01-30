@@ -383,80 +383,80 @@ export default function Caixa() {
             </Card>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" onClick={() => setMovementType('withdrawal')}>
-                  <ArrowDownCircle className="w-4 h-4 mr-2" />
-                  Sangria
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{movementType === 'withdrawal' ? 'Sangria' : 'Reforço'}</DialogTitle>
-                  <DialogDescription>
-                    {movementType === 'withdrawal' 
-                      ? 'Registre uma retirada de dinheiro do caixa'
-                      : 'Registre uma entrada de dinheiro no caixa'}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Button
-                      variant={movementType === 'withdrawal' ? 'default' : 'outline'}
-                      onClick={() => setMovementType('withdrawal')}
-                      className="flex-1"
-                    >
-                      Sangria
-                    </Button>
-                    <Button
-                      variant={movementType === 'deposit' ? 'default' : 'outline'}
-                      onClick={() => setMovementType('deposit')}
-                      className="flex-1"
-                    >
-                      Reforço
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={movementAmount}
-                      onChange={(e) => setMovementAmount(e.target.value)}
-                      placeholder="0,00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Descrição</Label>
-                    <Textarea
-                      value={movementDescription}
-                      onChange={(e) => setMovementDescription(e.target.value)}
-                      placeholder="Motivo da movimentação..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsMovementDialogOpen(false)}>
-                    Cancelar
+          {/* Actions - Only visible for admins */}
+          {isAdmin && (
+            <div className="flex gap-2">
+              <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" onClick={() => setMovementType('withdrawal')}>
+                    <ArrowDownCircle className="w-4 h-4 mr-2" />
+                    Sangria
                   </Button>
-                  <Button onClick={handleAddMovement} disabled={isSaving}>
-                    {isSaving ? 'Salvando...' : 'Confirmar'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{movementType === 'withdrawal' ? 'Sangria' : 'Reforço'}</DialogTitle>
+                    <DialogDescription>
+                      {movementType === 'withdrawal' 
+                        ? 'Registre uma retirada de dinheiro do caixa'
+                        : 'Registre uma entrada de dinheiro no caixa'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <Button
+                        variant={movementType === 'withdrawal' ? 'default' : 'outline'}
+                        onClick={() => setMovementType('withdrawal')}
+                        className="flex-1"
+                      >
+                        Sangria
+                      </Button>
+                      <Button
+                        variant={movementType === 'deposit' ? 'default' : 'outline'}
+                        onClick={() => setMovementType('deposit')}
+                        className="flex-1"
+                      >
+                        Reforço
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Valor (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={movementAmount}
+                        onChange={(e) => setMovementAmount(e.target.value)}
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Descrição</Label>
+                      <Textarea
+                        value={movementDescription}
+                        onChange={(e) => setMovementDescription(e.target.value)}
+                        placeholder="Motivo da movimentação..."
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsMovementDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleAddMovement} disabled={isSaving}>
+                      {isSaving ? 'Salvando...' : 'Confirmar'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
-            <Button variant="outline" onClick={() => {
-              setMovementType('deposit');
-              setIsMovementDialogOpen(true);
-            }}>
-              <ArrowUpCircle className="w-4 h-4 mr-2" />
-              Reforço
-            </Button>
+              <Button variant="outline" onClick={() => {
+                setMovementType('deposit');
+                setIsMovementDialogOpen(true);
+              }}>
+                <ArrowUpCircle className="w-4 h-4 mr-2" />
+                Reforço
+              </Button>
 
-            {isAdmin && (
               <Dialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="destructive">
@@ -506,8 +506,8 @@ export default function Caixa() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Movements Table */}
           <Card>

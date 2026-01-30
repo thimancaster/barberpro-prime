@@ -83,14 +83,14 @@ const App = () => (
                 <Route path="/vendas" element={<Vendas />} />
                 <Route path="/caixa" element={<Caixa />} />
                 <Route path="/comissoes" element={<Comissoes />} />
-                <Route path="/relatorios" element={<Relatorios />} />
-                <Route path="/despesas" element={<Despesas />} />
-                <Route path="/descontos" element={<Descontos />} />
-                <Route path="/fidelidade" element={<Fidelidade />} />
-                <Route path="/notificacoes" element={<Notificacoes />} />
-                <Route path="/avaliacoes" element={<Avaliacoes />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/integracoes" element={<Integracoes />} />
+                <Route path="/relatorios" element={<ProtectedRoute adminOnly><Relatorios /></ProtectedRoute>} />
+                <Route path="/despesas" element={<ProtectedRoute adminOnly><Despesas /></ProtectedRoute>} />
+                <Route path="/descontos" element={<ProtectedRoute adminOnly><Descontos /></ProtectedRoute>} />
+                <Route path="/fidelidade" element={<ProtectedRoute adminOnly><Fidelidade /></ProtectedRoute>} />
+                <Route path="/notificacoes" element={<ProtectedRoute adminOnly><Notificacoes /></ProtectedRoute>} />
+                <Route path="/avaliacoes" element={<ProtectedRoute adminOnly><Avaliacoes /></ProtectedRoute>} />
+                <Route path="/configuracoes" element={<ProtectedRoute adminOnly><Configuracoes /></ProtectedRoute>} />
+                <Route path="/integracoes" element={<ProtectedRoute adminOnly><Integracoes /></ProtectedRoute>} />
               </Route>
               
               {/* Catch all */}
