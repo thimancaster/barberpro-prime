@@ -43,7 +43,15 @@ const mainNavItems = [
   { title: 'Equipe', url: '/equipe', icon: UserCircle },
 ];
 
-const financeNavItems = [
+// Items visible to all roles (barbers can see/use these)
+const barberFinanceItems = [
+  { title: 'Produtos', url: '/produtos', icon: Package },
+  { title: 'Vendas (PDV)', url: '/vendas', icon: Package },
+  { title: 'Comissões', url: '/comissoes', icon: Users },
+];
+
+// Full finance items for admins
+const adminFinanceItems = [
   { title: 'Produtos', url: '/produtos', icon: Package },
   { title: 'Vendas (PDV)', url: '/vendas', icon: Package },
   { title: 'Caixa', url: '/caixa', icon: Receipt },
@@ -131,34 +139,32 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Finance Navigation - Admin only */}
-        {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {financeNavItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.url)}
-                      tooltip={item.title}
+        {/* Finance Navigation - Different items for admin vs barber */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {(isAdmin ? adminFinanceItems : barberFinanceItems).map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                  >
+                    <NavLink
+                      to={item.url}
+                      className="flex items-center gap-3"
+                      activeClassName="bg-sidebar-accent text-primary"
                     >
-                      <NavLink
-                        to={item.url}
-                        className="flex items-center gap-3"
-                        activeClassName="bg-sidebar-accent text-primary"
-                      >
-                        <item.icon className="w-5 h-5 flex-shrink-0" />
-                        <span>{item.title}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+                      <item.icon className="w-5 h-5 flex-shrink-0" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {/* Marketing Navigation - Admin only */}
         {isAdmin && (

@@ -86,13 +86,15 @@ export function useRealtimeAppointments({
         handleChange
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
+        if (status === 'SUBSCRIBED' && import.meta.env.DEV) {
           console.log('Realtime: Subscribed to appointments');
         }
       });
 
     return () => {
-      console.log('Realtime: Unsubscribing from appointments');
+      if (import.meta.env.DEV) {
+        console.log('Realtime: Unsubscribing from appointments');
+      }
       supabase.removeChannel(channel);
     };
   }, [organizationId, handleChange]);
