@@ -50,6 +50,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useRealtimeAppointments } from '@/hooks/useRealtimeAppointments';
+import { useNotifications } from '@/hooks/useNotifications';
 import { WaitingQueue } from '@/components/agenda/WaitingQueue';
 
 interface AppointmentWithRelations extends Appointment {
@@ -61,6 +62,7 @@ interface AppointmentWithRelations extends Appointment {
 export default function Agenda() {
   const navigate = useNavigate();
   const { organization, profile, isAdmin } = useAuth();
+  const { sendNotification } = useNotifications();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([]);
@@ -203,7 +205,7 @@ export default function Agenda() {
 
       const commissionAmount = (service.price * service.commission_percentage) / 100;
 
-      const { error } = await supabase.from('appointments').insert({
+      const { data: newAppointment, error } = await supabase.from('appointments').insert({
         organization_id: organization.id,
         client_id: formData.client_id,
         service_id: formData.service_id,
@@ -214,16 +216,25 @@ export default function Agenda() {
         commission_amount: commissionAmount,
         notes: formData.notes || null,
         status: 'scheduled',
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Send notification for new appointment
+      if (newAppointment) {
+        sendNotification({
+          trigger: 'appointment_created',
+          appointmentId: newAppointment.id,
+        });
+      }
 
       toast.success('Agendamento criado com sucesso!');
       setIsDialogOpen(false);
       resetForm();
       fetchData();
-    } catch (error: any) {
-      toast.error('Erro ao criar agendamento', { description: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error('Erro ao criar agendamento', { description: errorMessage });
     } finally {
       setIsSaving(false);
     }
@@ -238,10 +249,29 @@ export default function Agenda() {
 
       if (error) throw error;
 
+      // Send notification based on new status
+      if (newStatus === 'confirmed') {
+        sendNotification({
+          trigger: 'appointment_confirmed',
+          appointmentId,
+        });
+      } else if (newStatus === 'completed') {
+        sendNotification({
+          trigger: 'appointment_completed',
+          appointmentId,
+        });
+        // Also send review request after completion
+        sendNotification({
+          trigger: 'review_request',
+          appointmentId,
+        });
+      }
+
       toast.success('Status atualizado!');
       fetchData();
-    } catch (error: any) {
-      toast.error('Erro ao atualizar status', { description: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error('Erro ao atualizar status', { description: errorMessage });
     }
   };
 

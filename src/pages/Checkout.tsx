@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -32,6 +33,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { organization } = useAuth();
   const { toast } = useToast();
+  const { sendNotification } = useNotifications();
   
   const [appointment, setAppointment] = useState<AppointmentWithRelations | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,7 +146,28 @@ export default function Checkout() {
 
   const handleProcessCheckout = async () => {
     const success = await checkout.processCheckout();
-    if (success) {
+    if (success && appointment) {
+      // Send completion notification
+      sendNotification({
+        trigger: 'appointment_completed',
+        appointmentId: appointment.id,
+      });
+      
+      // Send review request
+      sendNotification({
+        trigger: 'review_request',
+        appointmentId: appointment.id,
+      });
+      
+      // Send loyalty points notification if client earned points
+      if (appointment.client_id) {
+        sendNotification({
+          trigger: 'loyalty_points_earned',
+          appointmentId: appointment.id,
+          clientId: appointment.client_id,
+        });
+      }
+      
       navigate('/agenda');
     }
   };
