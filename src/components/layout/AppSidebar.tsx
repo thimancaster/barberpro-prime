@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { TrialBadge } from '@/components/subscription/TrialBadge';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -107,6 +108,11 @@ export function AppSidebar() {
             </div>
           )}
         </div>
+        {!collapsed && (
+          <div className="mt-3">
+            <TrialBadge />
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarSeparator />
