@@ -19,7 +19,9 @@ import {
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PaywallBanner } from '@/components/subscription/PaywallBanner';
+import { toast } from 'sonner';
 
 interface DashboardStats {
   todayRevenue: number;
@@ -39,6 +41,7 @@ interface UpcomingAppointment extends Appointment {
 export default function Dashboard() {
   const { profile, organization, user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [stats, setStats] = useState<DashboardStats>({
     todayRevenue: 0,
     monthRevenue: 0,
@@ -49,6 +52,17 @@ export default function Dashboard() {
   });
   const [upcomingAppointments, setUpcomingAppointments] = useState<UpcomingAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check for upgrade success
+  useEffect(() => {
+    if (searchParams.get('upgraded') === 'true') {
+      toast.success('Assinatura ativada com sucesso!', {
+        description: 'Agora você tem acesso a todas as funcionalidades Premium.',
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (organization?.id) {
@@ -247,6 +261,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Subscription Banner */}
+      <PaywallBanner showAlways />
+      
       <div className="space-y-6">
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
