@@ -3,10 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Subscription, SubscriptionState, SubscriptionStatus, PlanId } from '@/types/subscription';
 
+// Master account with lifetime premium access
+const MASTER_EMAIL = 'thimancaster@hotmail.com';
+
 export function useSubscription(): SubscriptionState {
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check if current user is the master account
+  const isMasterAccount = user?.email?.toLowerCase() === MASTER_EMAIL.toLowerCase();
 
   const fetchSubscription = useCallback(async () => {
     if (!organization?.id) {
@@ -38,25 +44,27 @@ export function useSubscription(): SubscriptionState {
   }, [fetchSubscription]);
 
   // Calculate derived state
-  const status: SubscriptionStatus = subscription?.status as SubscriptionStatus || 'expired';
-  const plan: PlanId = (subscription?.plan_id as PlanId) || 'trial';
+  const status: SubscriptionStatus = isMasterAccount ? 'active' : (subscription?.status as SubscriptionStatus || 'expired');
+  const plan: PlanId = isMasterAccount ? 'premium_yearly' : ((subscription?.plan_id as PlanId) || 'trial');
   const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
   const currentPeriodEnd = subscription?.current_period_end ? new Date(subscription.current_period_end) : null;
 
-  // Check if trial is expired
-  const isTrialExpired = status === 'trialing' && trialEndsAt && trialEndsAt < new Date();
-  const isExpired = status === 'expired' || status === 'canceled' || isTrialExpired;
+  // Check if trial is expired (master account never expires)
+  const isTrialExpired = !isMasterAccount && status === 'trialing' && trialEndsAt && trialEndsAt < new Date();
+  const isExpired = !isMasterAccount && (status === 'expired' || status === 'canceled' || isTrialExpired);
   
-  // Premium = active subscription or valid trial
-  const isPremium = status === 'active' || (status === 'trialing' && !isTrialExpired);
-  const isTrialing = status === 'trialing' && !isTrialExpired;
+  // Premium = master account OR active subscription or valid trial
+  const isPremium = isMasterAccount || status === 'active' || (status === 'trialing' && !isTrialExpired);
+  const isTrialing = !isMasterAccount && status === 'trialing' && !isTrialExpired;
 
-  // Calculate days remaining
-  let daysRemaining = 0;
-  if (isTrialing && trialEndsAt) {
-    daysRemaining = Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-  } else if (status === 'active' && currentPeriodEnd) {
-    daysRemaining = Math.max(0, Math.ceil((currentPeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  // Calculate days remaining (master account = infinite)
+  let daysRemaining = isMasterAccount ? 9999 : 0;
+  if (!isMasterAccount) {
+    if (isTrialing && trialEndsAt) {
+      daysRemaining = Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    } else if (status === 'active' && currentPeriodEnd) {
+      daysRemaining = Math.max(0, Math.ceil((currentPeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    }
   }
 
   return {

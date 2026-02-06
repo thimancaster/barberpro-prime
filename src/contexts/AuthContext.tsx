@@ -3,6 +3,9 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, UserRole, Organization, AppRole } from '@/types/database';
 
+// Master account with full admin access
+const MASTER_EMAIL = 'thimancaster@hotmail.com';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -11,6 +14,7 @@ interface AuthContextType {
   organization: Organization | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isMasterAccount: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -27,7 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAdmin = userRole?.role === 'admin';
+  // Check if current user is the master account
+  const isMasterAccount = user?.email?.toLowerCase() === MASTER_EMAIL.toLowerCase();
+  
+  // Master account always has admin privileges
+  const isAdmin = isMasterAccount || userRole?.role === 'admin';
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -155,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         organization,
         isLoading,
         isAdmin,
+        isMasterAccount,
         signIn,
         signUp,
         signOut,
