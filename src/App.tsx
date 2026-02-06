@@ -35,6 +35,7 @@ import NotFound from "./pages/NotFound";
 
 // Components
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { AppLayout } from "./components/layout/AppLayout";
 
 const queryClient = new QueryClient();
@@ -83,14 +84,14 @@ const App = () => (
                 <Route path="/vendas" element={<Vendas />} />
                 <Route path="/caixa" element={<Caixa />} />
                 <Route path="/comissoes" element={<Comissoes />} />
-                <Route path="/relatorios" element={<ProtectedRoute adminOnly><Relatorios /></ProtectedRoute>} />
-                <Route path="/despesas" element={<ProtectedRoute adminOnly><Despesas /></ProtectedRoute>} />
-                <Route path="/descontos" element={<ProtectedRoute adminOnly><Descontos /></ProtectedRoute>} />
-                <Route path="/fidelidade" element={<ProtectedRoute adminOnly><Fidelidade /></ProtectedRoute>} />
-                <Route path="/notificacoes" element={<ProtectedRoute adminOnly><Notificacoes /></ProtectedRoute>} />
-                <Route path="/avaliacoes" element={<ProtectedRoute adminOnly><Avaliacoes /></ProtectedRoute>} />
-                <Route path="/configuracoes" element={<ProtectedRoute adminOnly><Configuracoes /></ProtectedRoute>} />
-                <Route path="/integracoes" element={<ProtectedRoute adminOnly><Integracoes /></ProtectedRoute>} />
+                <Route path="/relatorios" element={<AdminRoute><Relatorios /></AdminRoute>} />
+                <Route path="/despesas" element={<AdminRoute><Despesas /></AdminRoute>} />
+                <Route path="/descontos" element={<AdminRoute><Descontos /></AdminRoute>} />
+                <Route path="/fidelidade" element={<AdminRoute><Fidelidade /></AdminRoute>} />
+                <Route path="/notificacoes" element={<AdminRoute><Notificacoes /></AdminRoute>} />
+                <Route path="/avaliacoes" element={<AdminRoute><Avaliacoes /></AdminRoute>} />
+                <Route path="/configuracoes" element={<AdminRoute><Configuracoes /></AdminRoute>} />
+                <Route path="/integracoes" element={<AdminRoute><Integracoes /></AdminRoute>} />
               </Route>
               
               {/* Catch all */}
