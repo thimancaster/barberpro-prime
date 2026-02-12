@@ -1,474 +1,156 @@
 
-# Plano Completo: Finalizacao do Sistema + Stripe + Landing Page de Vendas
+# Varredura Completa e Plano de Finalizacao do BarberPro Prime
 
-## Resumo Executivo
+## Diagnostico: Problemas Encontrados
 
-Este plano aborda 4 grandes areas:
-1. **Varredura e correcoes** do sistema atual
-2. **Landing Page otimizada para vendas** (trafego pago)
-3. **Sistema de autenticacao com auto-cadastro** (sem depender de convites)
-4. **Integracao Stripe para pagamentos** e controle de acesso por plano
+### CRITICOS (Bugs que impedem funcionalidade)
 
----
+| # | Problema | Onde | Impacto |
+|---|---------|------|---------|
+| 1 | **MASTER_EMAIL hardcoded no codigo-fonte** | `AuthContext.tsx`, `useSubscription.ts` | Email do dono exposto publicamente no frontend. Qualquer pessoa pode ver. Deve ser variavel de ambiente ou verificacao no banco. |
+| 2 | **Sem funcionalidade "Esqueci a senha"** | `Login.tsx` | Usuarios que esqueceram a senha ficam permanentemente bloqueados. Nao ha nenhum fluxo de reset. |
+| 3 | **Signup mostra "Verifique seu email" mas email nao chega** | `Login.tsx` linha 88-91 | Mensagem de sucesso fala para verificar email, mas confirmacao esta desabilitada ou rate-limitada. Cria confusao. |
+| 4 | **Notificacao bell (sino) sempre com bolinha vermelha** | `AppHeader.tsx` linha 40 | O ponto de notificacao e estatico (sempre visivel), nao reflete notificacoes reais. Parece bug para o usuario. |
+| 5 | **`supabase.rpc as any` no Onboarding** | `Onboarding.tsx` linha 66 | Type assertion perigosa. Os tipos gerados (`types.ts`) nao incluem as RPCs customizadas. Precisa regenerar tipos. |
 
-## PARTE 1: Estado Atual do Sistema
+### ALTOS (Funcionalidades incompletas)
 
-### O que ja esta implementado:
+| # | Problema | Onde | Impacto |
+|---|---------|------|---------|
+| 6 | **Subscription Gate nao bloqueia rotas premium** | `ProtectedRoute.tsx` | Nenhuma verificacao de subscription nas rotas. Usuarios com trial expirado acessam tudo normalmente. O `PaywallBanner` e apenas visual. |
+| 7 | **Dashboard nao inclui receita de produtos** | `Dashboard.tsx` | Faturamento mensal so conta `appointments.price`. Vendas de produtos (`product_sales`) sao ignoradas no calculo. |
+| 8 | **Portal de gerenciamento da assinatura inacessivel** | Nenhuma pagina | A edge function `create-portal-session` existe mas nao ha botao/link no frontend para acessar o portal Stripe. |
+| 9 | **Landing Pricing nao conecta ao Stripe diretamente** | `Pricing.tsx` | Botoes redirecionam para `/login?tab=signup&plan=X` mas o parametro `plan` nunca e usado no Login para iniciar checkout apos signup. |
+| 10 | **Lembretes automaticos (1h, 24h) nao implementados** | Nenhum cron/scheduler | Os triggers `appointment_reminder_1h` e `appointment_reminder_24h` existem como tipos mas nao ha nenhum cron job ou pg_cron que os dispare. |
 
-| Modulo | Status | Observacoes |
-|--------|--------|-------------|
-| Agenda/Agendamentos | OK | Drag & drop, realtime |
-| Clientes | OK | CRUD, historico |
-| Servicos | OK | Categorias, precos |
-| Equipe/Profiles | OK | Convite + cadastro manual |
-| Produtos/Estoque | OK | PDV, movimentacoes |
-| Caixa | OK | Abertura/fechamento |
-| Comissoes | OK | Calculo automatico |
-| Checkout Unificado | OK | Pagamentos + produtos |
-| Notificacoes | OK | Templates, n8n webhook |
-| Hierarquia Admin/Barber | OK | Rotas protegidas |
-| Agendamento Publico | OK | Link por slug |
-| Avaliacoes/Reviews | OK | NPS, feedback |
-| Fidelidade | OK | Pontos, recompensas |
-| Descontos/Cupons | OK | Codigos promocionais |
-| Despesas | OK | CRUD, recorrentes |
-| Relatorios | OK | Dashboards basicos |
+### MEDIOS (Pontas soltas e inconsistencias)
 
-### O que falta implementar:
+| # | Problema | Onde | Impacto |
+|---|---------|------|---------|
+| 11 | **Tipos gerados desatualizados** | `types.ts` | O arquivo auto-gerado nao inclui RPCs como `create_organization`, `has_premium_access`, etc. Causa `as any` em varios locais. |
+| 12 | **`create-team-member` lista TODOS usuarios para checar email** | Edge function linha 103 | `listUsers()` sem paginacao carrega todos os usuarios. Em escala, isso sera lento e pode falhar. |
+| 13 | **Header nao mostra titulo da pagina atual** | `AppHeader.tsx` | O prop `title` nunca e passado pelo `AppLayout`. Header fica sem contexto de qual pagina o usuario esta. |
+| 14 | **Sem pagina de gerenciamento de assinatura** | Frontend | Usuario nao tem onde ver detalhes do plano, trocar cartao, cancelar, ver faturas. Precisa de uma pagina `/assinatura` ou secao em Configuracoes. |
+| 15 | **`commission_amount` calculado no frontend E no trigger** | `Agenda.tsx` + trigger `validate_appointment_commission` | Duplicacao: o frontend calcula e envia, mas o trigger sobrescreve. O calculo no frontend e desnecessario. |
 
-| Item | Prioridade | Descricao |
-|------|-----------|-----------|
-| Self-signup | ALTA | Cadastro publico sem convite |
-| Integracao Stripe | ALTA | Pagamentos de assinatura |
-| Trial de 7 dias | ALTA | Periodo de teste |
-| Controle por plano | ALTA | Bloquear funcoes por plano |
-| Landing Page Vendas | ALTA | Otimizada para conversao |
-| Tabela subscriptions | ALTA | Armazenar status da assinatura |
+### BAIXOS (Melhorias e polimento)
+
+| # | Problema | Onde | Impacto |
+|---|---------|------|---------|
+| 16 | **Sem loading skeleton no Dashboard** | `Dashboard.tsx` | Cards ficam com valores "R$ 0,00" por um momento antes de carregar. Parece bug. |
+| 17 | **Sem confirmacao ao deletar recursos** | Varias paginas | Deletar cliente/servico/produto nao pede confirmacao. Acoes destrutivas sem undo. |
+| 18 | **Sidebar sem link "Assinatura/Plano"** | `AppSidebar.tsx` | Nao ha como acessar informacoes do plano alem do badge no topo. |
+| 19 | **`verify_jwt = false` em funcoes que deveriam verificar** | `supabase/config.toml` | `create-team-member` e `send-notification` nao verificam JWT no nivel do Supabase, embora facam verificacao manual dentro da funcao. Funciona, mas e uma camada extra de seguranca. |
 
 ---
 
-## PARTE 2: Landing Page Otimizada para Vendas
+## Plano de Implementacao
 
-### Problemas da Landing Page Atual:
-1. **Generica** - Nao e focada em conversao para trafego pago
-2. **Sem urgencia** - Falta escassez/urgencia
-3. **CTAs fracos** - Redirecionam apenas para /login
-4. **Sem prova social real** - Numeros ficticios sem credibilidade
-5. **Sem FAQ** - Duvidas nao respondidas
-6. **Sem garantia** - Falta seguranca para o comprador
+### Fase 1: Correcoes Criticas
 
-### Nova Estrutura da Landing Page:
+**1.1 Remover MASTER_EMAIL hardcoded**
+- Mover logica de master account para o banco de dados (coluna `is_super_admin` em `profiles` ou tabela separada)
+- Remover constante exposta do frontend
+- Atualizar `AuthContext.tsx` e `useSubscription.ts`
 
-```text
-+------------------------------------------+
-|  HEADER FIXO (simplificado)              |
-|  Logo | CTA: "Teste Gratis 7 Dias"       |
-+------------------------------------------+
+**1.2 Implementar "Esqueci a senha"**
+- Adicionar link e formulario na pagina de Login
+- Usar `supabase.auth.resetPasswordForEmail()`
+- Criar pagina/modal de redefinicao de senha
 
-+------------------------------------------+
-|  HERO SECTION                            |
-|  - Headline focada em DOR do cliente     |
-|  - Subheadline com solucao               |
-|  - CTA primario: "Comece Agora - Gratis" |
-|  - Video/GIF mostrando o sistema         |
-|  - Badge urgencia: "Oferta por tempo     |
-|    limitado"                             |
-+------------------------------------------+
+**1.3 Corrigir mensagem pos-signup**
+- Se confirmacao de email esta desabilitada: remover mensagem "verifique email" e redirecionar direto para onboarding
+- Se esta habilitada: garantir que emails estao sendo enviados (SMTP configurado)
 
-+------------------------------------------+
-|  SOCIAL PROOF (barra de logos/numeros)   |
-|  - "500+ barbearias confiam"             |
-|  - Estrelas 4.9/5                        |
-|  - "R$ 2M+ gerenciados"                  |
-+------------------------------------------+
+**1.4 Corrigir notificacao bell no header**
+- Remover ponto vermelho estatico
+- Conectar a dados reais (contar notificacoes nao lidas) ou remover o indicador
 
-+------------------------------------------+
-|  PROBLEMA/AGITACAO                       |
-|  - Lista de dores do barbeiro            |
-|  - "Voce ainda faz isso manualmente?"    |
-+------------------------------------------+
+**1.5 Corrigir type assertion `as any`**
+- Regenerar tipos do Supabase para incluir RPCs
+- Remover `as any` do Onboarding
 
-+------------------------------------------+
-|  SOLUCAO (Features com beneficios)       |
-|  - 8 cards com icones                    |
-|  - Foco em RESULTADOS nao funcoes        |
-+------------------------------------------+
+### Fase 2: Subscription Gate Real
 
-+------------------------------------------+
-|  COMO FUNCIONA (3 passos)                |
-|  1. Cadastre-se gratis                   |
-|  2. Configure em 5 minutos               |
-|  3. Comece a faturar mais                |
-+------------------------------------------+
+**2.1 Implementar bloqueio de rotas por plano**
+- Atualizar `ProtectedRoute.tsx` para verificar `useSubscription()`
+- Rotas premium (relatorios, fidelidade, descontos, integracoes, notificacoes) devem redirecionar para pagina de upgrade quando trial expirado
+- Rotas basicas (agenda, clientes, servicos) continuam acessiveis
 
-+------------------------------------------+
-|  COMPARATIVO (Antes x Depois)            |
-|  - Tabela visual                         |
-+------------------------------------------+
+**2.2 Criar pagina de gerenciamento de assinatura**
+- Nova pagina `/assinatura` ou aba em Configuracoes
+- Mostrar: plano atual, dias restantes, data de renovacao
+- Botao "Gerenciar Assinatura" que chama `create-portal-session`
+- Botao "Fazer Upgrade" para usuarios trial
 
-+------------------------------------------+
-|  PRECOS (2 planos)                       |
-|  - Gratis 7 dias (todas funcoes)         |
-|  - Premium R$89,90/mes                   |
-|  - CTA com Stripe Checkout               |
-+------------------------------------------+
+**2.3 Conectar Landing Pricing ao fluxo completo**
+- Usar parametro `plan` da URL no Login
+- Apos signup + onboarding, iniciar checkout Stripe automaticamente se `plan` foi selecionado
 
-+------------------------------------------+
-|  FAQ (Acordeao)                          |
-|  - 6-8 perguntas comuns                  |
-+------------------------------------------+
+### Fase 3: Dashboard e Faturamento
 
-+------------------------------------------+
-|  GARANTIA                                |
-|  - 7 dias gratis + cancele quando quiser |
-+------------------------------------------+
+**3.1 Incluir receita de produtos no Dashboard**
+- Somar `product_sales.total_price` ao faturamento diario e mensal
+- Adicionar card separado "Vendas de Produtos" ou incluir no total
 
-+------------------------------------------+
-|  CTA FINAL                               |
-|  - "Nao perca mais clientes"             |
-|  - Botao grande                          |
-+------------------------------------------+
+**3.2 Adicionar loading skeletons**
+- Skeleton cards enquanto dados carregam
+- Evitar flash de "R$ 0,00"
 
-+------------------------------------------+
-|  FOOTER (simplificado)                   |
-|  - Termos | Privacidade | Suporte        |
-+------------------------------------------+
-```
+**3.3 Remover calculo duplicado de comissao**
+- No `Agenda.tsx`, nao enviar `commission_amount` no insert (o trigger ja calcula)
+- Simplificar codigo frontend
 
-### Arquivos a Criar/Modificar:
+### Fase 4: Polimento e Funcionalidades Menores
 
-| Arquivo | Acao |
-|---------|------|
-| `src/pages/Index.tsx` | Refatorar completamente |
-| `src/components/landing/Hero.tsx` | Criar |
-| `src/components/landing/Features.tsx` | Criar |
-| `src/components/landing/Pricing.tsx` | Criar |
-| `src/components/landing/FAQ.tsx` | Criar |
-| `src/components/landing/Testimonials.tsx` | Criar |
-| `src/components/landing/HowItWorks.tsx` | Criar |
+**4.1 Titulo dinamico no Header**
+- `AppLayout` deve passar titulo baseado na rota atual para `AppHeader`
+
+**4.2 Dialogo de confirmacao para acoes destrutivas**
+- Usar `AlertDialog` do shadcn para deletar clientes, servicos, produtos
+
+**4.3 Adicionar link "Assinatura" na Sidebar**
+- Novo item no menu de configuracao para admins
+
+**4.4 Otimizar `create-team-member`**
+- Substituir `listUsers()` por busca direta por email
+
+### Fase 5: Lembretes Automaticos (pos-lancamento)
+
+**5.1 Cron job para lembretes**
+- Criar edge function `process-reminders` com pg_cron ou chamada externa
+- Buscar agendamentos nas proximas 1h e 24h
+- Disparar `send-notification` para cada um
 
 ---
 
-## PARTE 3: Sistema de Autenticacao com Self-Signup
+## Resumo de Arquivos a Modificar
 
-### Fluxo Atual (problema):
-```text
-Usuario -> Landing -> Login -> BLOQUEADO (precisa convite)
-```
+| Arquivo | Mudancas |
+|---------|---------|
+| `src/contexts/AuthContext.tsx` | Remover MASTER_EMAIL, usar flag do banco |
+| `src/hooks/useSubscription.ts` | Remover MASTER_EMAIL, usar flag do banco |
+| `src/pages/Login.tsx` | Adicionar "Esqueci a senha", corrigir mensagem pos-signup |
+| `src/components/ProtectedRoute.tsx` | Adicionar verificacao de subscription |
+| `src/components/layout/AppHeader.tsx` | Corrigir bell, adicionar titulo dinamico |
+| `src/components/layout/AppLayout.tsx` | Passar titulo para header |
+| `src/components/layout/AppSidebar.tsx` | Adicionar link Assinatura |
+| `src/pages/Dashboard.tsx` | Incluir produto_sales, skeleton loading |
+| `src/pages/Agenda.tsx` | Remover calculo duplicado de comissao |
+| `src/pages/Onboarding.tsx` | Remover `as any` |
+| `src/pages/Configuracoes.tsx` | Adicionar aba Assinatura com portal Stripe |
+| `supabase/functions/create-team-member/index.ts` | Otimizar busca de email |
 
-### Novo Fluxo:
-```text
-Usuario -> Landing -> Cadastro -> Trial 7 dias -> Onboarding -> Dashboard
-                             |
-                             v
-                      (apos 7 dias)
-                             |
-                             v
-                      Stripe Checkout -> Premium
-```
-
-### Modificacoes no Login:
-
-1. **Adicionar aba de Cadastro** na pagina de login
-2. **Signup publico** - qualquer pessoa pode criar conta
-3. **Apos signup** -> redirecionar para Onboarding
-4. **Trial automatico** de 7 dias
-
-### Nova Estrutura da Pagina de Login:
-
-```text
-+------------------------------------------+
-|  CARD DE AUTENTICACAO                    |
-|                                          |
-|  [Entrar]  [Criar Conta]   <- Tabs       |
-|                                          |
-|  -- Aba Entrar --                        |
-|  Email: [___________]                    |
-|  Senha: [___________]                    |
-|  [Entrar]                                |
-|  [Esqueci a senha]                       |
-|                                          |
-|  -- Aba Criar Conta --                   |
-|  Nome: [___________]                     |
-|  Email: [___________]                    |
-|  Senha: [___________]                    |
-|  Confirmar: [___________]                |
-|  [Comecar 7 Dias Gratis]                 |
-+------------------------------------------+
-```
-
-### Arquivos a Modificar:
-
-| Arquivo | Modificacoes |
-|---------|-------------|
-| `src/pages/Login.tsx` | Adicionar tabs + signup |
-| `src/contexts/AuthContext.tsx` | Adicionar trial_ends_at no profile |
-
----
-
-## PARTE 4: Integracao Stripe
-
-### Estrutura de Planos:
-
-| Plano | Preco | Periodo | Stripe Price ID |
-|-------|-------|---------|-----------------|
-| Trial | R$ 0 | 7 dias | - |
-| Premium Mensal | R$ 89,90 | mes | Criar no Stripe |
-| Premium Anual | R$ 719,00 | ano | Criar no Stripe |
-
-### Tabelas de Banco de Dados Necessarias:
-
-```sql
--- Nova tabela: subscriptions
-CREATE TABLE public.subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  stripe_customer_id TEXT,
-  stripe_subscription_id TEXT,
-  plan_id TEXT NOT NULL DEFAULT 'trial',
-  status TEXT NOT NULL DEFAULT 'trialing', -- trialing, active, past_due, canceled, expired
-  trial_ends_at TIMESTAMPTZ,
-  current_period_start TIMESTAMPTZ,
-  current_period_end TIMESTAMPTZ,
-  cancel_at_period_end BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(organization_id)
-);
-
--- RLS Policies
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own org subscription"
-ON subscriptions FOR SELECT
-USING (organization_id = get_user_organization_id(auth.uid()));
-
-CREATE POLICY "Only system can insert/update subscriptions"
-ON subscriptions FOR ALL
-USING (false); -- Apenas Edge Functions com service role
-```
-
-### Edge Functions Necessarias:
-
-1. **`create-checkout-session`**
-   - Cria sessao Stripe Checkout
-   - Redireciona usuario para pagamento
-
-2. **`stripe-webhook`**
-   - Recebe eventos do Stripe
-   - Atualiza status da subscription
-   - Eventos: `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`
-
-3. **`create-portal-session`**
-   - Permite usuario gerenciar assinatura
-   - Cancelar, trocar cartao, ver faturas
-
-### Fluxo de Pagamento:
-
-```text
-1. Usuario clica "Assinar Premium"
-         |
-         v
-2. Frontend chama Edge Function create-checkout-session
-         |
-         v
-3. Edge Function cria sessao no Stripe
-         |
-         v
-4. Usuario e redirecionado para Stripe Checkout
-         |
-         v
-5. Stripe processa pagamento
-         |
-         v
-6. Webhook stripe-webhook recebe evento
-         |
-         v
-7. Edge Function atualiza tabela subscriptions
-         |
-         v
-8. Usuario ve status Premium no dashboard
-```
-
-### Controle de Acesso por Plano:
-
-```text
-Funcoes por Plano:
-
-| Funcao                  | Trial | Premium |
-|------------------------|-------|---------|
-| Agenda                 | SIM   | SIM     |
-| Clientes               | SIM   | SIM     |
-| Servicos               | SIM   | SIM     |
-| 1 Usuario              | SIM   | SIM     |
-| Usuarios Ilimitados    | NAO   | SIM     |
-| Dashboard Avancado     | NAO   | SIM     |
-| Relatorios             | NAO   | SIM     |
-| Notificacoes WhatsApp  | NAO   | SIM     |
-| Fidelidade             | NAO   | SIM     |
-| Descontos              | NAO   | SIM     |
-| Integracoes            | NAO   | SIM     |
-| Suporte Prioritario    | NAO   | SIM     |
-```
-
-### Componente de Paywall:
-
-Criar componente que exibe:
-- Trial restante (X dias)
-- Botao para upgrade
-- Bloqueio de funcoes premium
-
----
-
-## PARTE 5: Arquivos a Criar
+## Arquivos Novos
 
 | Arquivo | Descricao |
 |---------|-----------|
-| `src/pages/Index.tsx` | Landing page refatorada |
-| `src/components/landing/Hero.tsx` | Secao hero |
-| `src/components/landing/Features.tsx` | Grid de features |
-| `src/components/landing/Pricing.tsx` | Cards de precos com Stripe |
-| `src/components/landing/FAQ.tsx` | Acordeao de perguntas |
-| `src/components/landing/HowItWorks.tsx` | 3 passos |
-| `src/components/landing/Testimonials.tsx` | Depoimentos |
-| `src/components/landing/Guarantee.tsx` | Garantia |
-| `src/components/subscription/PaywallBanner.tsx` | Banner de upgrade |
-| `src/components/subscription/TrialBadge.tsx` | Badge de trial |
-| `src/hooks/useSubscription.ts` | Hook para status da assinatura |
-| `src/types/subscription.ts` | Tipos de subscription |
-| `supabase/functions/create-checkout-session/index.ts` | Criar sessao Stripe |
-| `supabase/functions/stripe-webhook/index.ts` | Webhook do Stripe |
-| `supabase/functions/create-portal-session/index.ts` | Portal do cliente |
+| Migracao SQL | Adicionar `is_super_admin` em profiles |
 
-## PARTE 6: Arquivos a Modificar
+## Ordem de Execucao
 
-| Arquivo | Modificacoes |
-|---------|-------------|
-| `src/pages/Login.tsx` | Tabs + signup |
-| `src/contexts/AuthContext.tsx` | Adicionar subscription state |
-| `src/components/ProtectedRoute.tsx` | Verificar subscription |
-| `src/components/layout/AppSidebar.tsx` | Mostrar status do plano |
-| `supabase/config.toml` | Novas Edge Functions |
-| `.env` | Adicionar STRIPE_PUBLISHABLE_KEY |
-
-## PARTE 7: Migracoes SQL
-
-```sql
--- 1. Tabela de subscriptions
-CREATE TABLE IF NOT EXISTS public.subscriptions (...);
-
--- 2. Atualizar funcao create_organization para criar trial
--- Adicionar trial_ends_at automaticamente
-
--- 3. RLS policies para subscriptions
-```
-
----
-
-## Ordem de Implementacao
-
-### Fase 1: Infraestrutura (Stripe + Database)
-1. Habilitar Stripe no Lovable
-2. Criar produtos/precos no Stripe
-3. Criar tabela `subscriptions`
-4. Criar Edge Functions do Stripe
-5. Configurar webhook do Stripe
-
-### Fase 2: Autenticacao
-1. Modificar Login.tsx com tabs
-2. Implementar signup publico
-3. Modificar create_organization para trial
-4. Criar hook useSubscription
-
-### Fase 3: Controle de Acesso
-1. Atualizar ProtectedRoute com verificacao de plano
-2. Criar PaywallBanner
-3. Criar TrialBadge
-4. Integrar no Sidebar/Dashboard
-
-### Fase 4: Landing Page
-1. Criar componentes de landing
-2. Refatorar Index.tsx
-3. Conectar CTAs com Stripe Checkout
-4. Testar fluxo completo
-
-### Fase 5: Testes e Polimento
-1. Testar trial -> expiracao
-2. Testar pagamento -> ativacao
-3. Testar cancelamento
-4. Ajustar copy para conversao
-
----
-
-## Secao Tecnica
-
-### Configuracao do Stripe:
-
-1. **Criar Produtos no Stripe Dashboard:**
-   - Produto: "BarberPro Prime Premium"
-   - Preco Mensal: R$ 89,90 (BRL)
-   - Preco Anual: R$ 719,00 (BRL)
-
-2. **Webhook URL:**
-   - `https://{project-id}.supabase.co/functions/v1/stripe-webhook`
-   - Eventos: `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`
-
-3. **Secrets Necessarios:**
-   - `STRIPE_SECRET_KEY` - Chave secreta do Stripe
-   - `STRIPE_WEBHOOK_SECRET` - Secret do webhook
-
-### Edge Function create-checkout-session:
-
-```typescript
-// Parametros esperados:
-{
-  price_id: string; // ID do preco no Stripe
-  success_url: string;
-  cancel_url: string;
-}
-
-// Retorno:
-{
-  checkout_url: string;
-}
-```
-
-### Edge Function stripe-webhook:
-
-```typescript
-// Eventos tratados:
-// checkout.session.completed -> Cria subscription com status 'active'
-// invoice.paid -> Atualiza current_period_end
-// customer.subscription.updated -> Atualiza status
-// customer.subscription.deleted -> Marca como 'canceled'
-```
-
-### Hook useSubscription:
-
-```typescript
-interface SubscriptionState {
-  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired';
-  plan: 'trial' | 'premium';
-  trialEndsAt: Date | null;
-  currentPeriodEnd: Date | null;
-  isLoading: boolean;
-  isPremium: boolean;
-  daysRemaining: number;
-}
-```
-
----
-
-## Resultado Final
-
-Apos implementacao:
-
-1. **Usuario visita landing** -> Ve pagina otimizada para vendas
-2. **Clica em "Comecar Gratis"** -> Tela de cadastro
-3. **Cria conta** -> Automaticamente tem 7 dias de trial
-4. **Completa onboarding** -> Acessa todas funcoes
-5. **Trial expira** -> Ve banner de upgrade
-6. **Clica em "Assinar"** -> Stripe Checkout
-7. **Paga** -> Acesso Premium liberado
-8. **Gerencia assinatura** -> Portal do Stripe
-
+1. Fase 1 (Criticos) - Correcoes que impedem uso normal
+2. Fase 2 (Subscription Gate) - Monetizacao funcional
+3. Fase 3 (Dashboard/Faturamento) - Dados financeiros corretos
+4. Fase 4 (Polimento) - UX e detalhes
+5. Fase 5 (Lembretes) - Pode ser pos-lancamento
