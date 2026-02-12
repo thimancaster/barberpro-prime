@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Save, Building2, Calendar, Link2, Copy, Check, ExternalLink } from 'lucide-react';
+import { Loader2, Save, Building2, Calendar, Link2, Copy, Check, ExternalLink, CreditCard, Crown, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = [
@@ -21,9 +22,25 @@ const DAYS_OF_WEEK = [
   { value: 6, label: 'Sáb', fullLabel: 'Sábado' },
 ];
 
+const PLAN_LABELS: Record<string, string> = {
+  trial: 'Trial Gratuito',
+  premium_monthly: 'Premium Mensal',
+  premium_yearly: 'Premium Anual',
+};
+
+const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  active: { label: 'Ativo', variant: 'default' },
+  trialing: { label: 'Período de Teste', variant: 'secondary' },
+  past_due: { label: 'Pagamento Pendente', variant: 'destructive' },
+  canceled: { label: 'Cancelado', variant: 'destructive' },
+  expired: { label: 'Expirado', variant: 'destructive' },
+};
+
 export default function Configuracoes() {
   const { organization, refreshProfile } = useAuth();
+  const { status, plan, daysRemaining, isPremium, isTrialing, trialEndsAt, currentPeriodEnd } = useSubscription();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -102,10 +119,70 @@ export default function Configuracoes() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('create-portal-session', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw response.error;
+      
+      const { url } = response.data;
+      if (url) {
+        window.open(url, '_blank');
+      }
+    } catch (error: any) {
+      toast.error('Erro ao abrir portal', { description: error.message });
+    } finally {
+      setIsLoadingPortal(false);
+    }
+  };
+
+  const handleUpgrade = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('create-checkout-session', {
+        body: { planId: 'premium_monthly' },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw response.error;
+      
+      const { url } = response.data;
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error: any) {
+      toast.error('Erro ao iniciar checkout', { description: error.message });
+    } finally {
+      setIsLoadingPortal(false);
+    }
+  };
+
+  const statusInfo = STATUS_LABELS[status] || STATUS_LABELS.expired;
+  const formatDate = (date: Date | null) => date ? date.toLocaleDateString('pt-BR') : '—';
+
   return (
     <div className="max-w-3xl space-y-6">
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general" className="gap-2">
             <Building2 className="w-4 h-4" />
             <span className="hidden sm:inline">Geral</span>
@@ -117,6 +194,10 @@ export default function Configuracoes() {
           <TabsTrigger value="booking" className="gap-2">
             <Link2 className="w-4 h-4" />
             <span className="hidden sm:inline">Agendamento</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="gap-2">
+            <CreditCard className="w-4 h-4" />
+            <span className="hidden sm:inline">Assinatura</span>
           </TabsTrigger>
         </TabsList>
 
@@ -207,7 +288,6 @@ export default function Configuracoes() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Horários de Abertura/Fechamento */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Horário de Abertura</Label>
@@ -227,7 +307,6 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              {/* Dias de Funcionamento */}
               <div className="space-y-3">
                 <Label>Dias de Funcionamento</Label>
                 <div className="flex flex-wrap gap-2">
@@ -326,6 +405,102 @@ export default function Configuracoes() {
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Assinatura */}
+        <TabsContent value="subscription">
+          <Card className="card-gradient border-border/50">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="font-display">Assinatura</CardTitle>
+                  <CardDescription>Gerencie seu plano e pagamentos</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Current Plan */}
+              <div className="p-4 rounded-lg border border-border bg-secondary/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Plano Atual</p>
+                    <p className="text-lg font-semibold flex items-center gap-2">
+                      {isPremium && <Sparkles className="w-4 h-4 text-primary" />}
+                      {PLAN_LABELS[plan] || plan}
+                    </p>
+                  </div>
+                  <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {isTrialing && trialEndsAt && (
+                    <div>
+                      <p className="text-muted-foreground">Trial expira em</p>
+                      <p className="font-medium">{formatDate(trialEndsAt)} ({daysRemaining} dias)</p>
+                    </div>
+                  )}
+                  {status === 'active' && currentPeriodEnd && (
+                    <div>
+                      <p className="text-muted-foreground">Próxima cobrança</p>
+                      <p className="font-medium">{formatDate(currentPeriodEnd)}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-muted-foreground">Dias restantes</p>
+                    <p className="font-medium">{daysRemaining > 9000 ? '∞' : daysRemaining}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-3">
+                {isPremium && status === 'active' && (
+                  <Button
+                    variant="outline"
+                    onClick={handleManageSubscription}
+                    disabled={isLoadingPortal}
+                    className="gap-2"
+                  >
+                    {isLoadingPortal ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-4 h-4" />
+                    )}
+                    Gerenciar Assinatura (Stripe)
+                  </Button>
+                )}
+
+                {(isTrialing || status === 'expired' || status === 'canceled') && (
+                  <Button
+                    onClick={handleUpgrade}
+                    disabled={isLoadingPortal}
+                    className="gap-2"
+                  >
+                    {isLoadingPortal ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Crown className="w-4 h-4" />
+                    )}
+                    Fazer Upgrade para Premium
+                  </Button>
+                )}
+              </div>
+
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <h4 className="font-medium text-sm">Sobre o Premium</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Relatórios avançados e analytics</li>
+                  <li>• Programa de fidelidade e cupons</li>
+                  <li>• Notificações automatizadas via WhatsApp</li>
+                  <li>• Integrações com n8n e ferramentas externas</li>
+                  <li>• Suporte prioritário</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

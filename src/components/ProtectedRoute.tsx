@@ -1,6 +1,16 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Loader2 } from 'lucide-react';
+
+// Routes that require premium subscription
+const PREMIUM_ROUTES = [
+  '/relatorios',
+  '/fidelidade',
+  '/descontos',
+  '/integracoes',
+  '/notificacoes',
+];
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,9 +24,9 @@ export function ProtectedRoute({
   adminOnly = false,
 }: ProtectedRouteProps) {
   const { user, profile, isLoading, isAdmin } = useAuth();
+  const { isPremium, isLoading: subLoading } = useSubscription();
   const location = useLocation();
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -28,24 +38,25 @@ export function ProtectedRoute({
     );
   }
 
-  // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check if user has organization when required
   if (requireOrganization) {
     if (!profile?.organization_id) {
       return <Navigate to="/onboarding" replace />;
     }
+
+    // Block premium routes when subscription expired (only after sub loaded)
+    if (!subLoading && !isPremium && PREMIUM_ROUTES.includes(location.pathname)) {
+      return <Navigate to="/dashboard?upgrade=true" replace />;
+    }
   } else {
-    // For onboarding page - redirect to dashboard if user already has organization
     if (profile?.organization_id && location.pathname === '/onboarding') {
       return <Navigate to="/dashboard" replace />;
     }
   }
 
-  // Check admin access
   if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }

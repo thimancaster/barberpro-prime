@@ -15,6 +15,7 @@ import {
   Star,
   Bell,
   MessageSquare,
+  CreditCard,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,14 +45,12 @@ const mainNavItems = [
   { title: 'Equipe', url: '/equipe', icon: UserCircle },
 ];
 
-// Items visible to all roles (barbers can see/use these)
 const barberFinanceItems = [
   { title: 'Produtos', url: '/produtos', icon: Package },
   { title: 'Vendas (PDV)', url: '/vendas', icon: Package },
   { title: 'Comissões', url: '/comissoes', icon: Users },
 ];
 
-// Full finance items for admins
 const adminFinanceItems = [
   { title: 'Produtos', url: '/produtos', icon: Package },
   { title: 'Vendas (PDV)', url: '/vendas', icon: Package },
@@ -70,6 +69,7 @@ const marketingNavItems = [
 
 const configNavItems = [
   { title: 'Configurações', url: '/configuracoes', icon: Settings },
+  { title: 'Assinatura', url: '/configuracoes?tab=subscription', icon: CreditCard },
   { title: 'Integrações', url: '/integracoes', icon: Webhook },
 ];
 
@@ -79,7 +79,7 @@ export function AppSidebar() {
   const { profile, organization, signOut, isAdmin } = useAuth();
   const collapsed = state === 'collapsed';
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || location.pathname + location.search === path;
 
   const getInitials = (name: string) => {
     return name
@@ -118,7 +118,6 @@ export function AppSidebar() {
       <SidebarSeparator />
 
       <SidebarContent className="custom-scrollbar">
-        {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel>Principal</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -145,7 +144,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Finance Navigation - Different items for admin vs barber */}
         <SidebarGroup>
           <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -172,7 +170,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Marketing Navigation - Admin only */}
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>Marketing</SidebarGroupLabel>
@@ -201,7 +198,6 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Config Navigation - Admin only */}
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>Sistema</SidebarGroupLabel>

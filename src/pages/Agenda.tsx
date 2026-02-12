@@ -203,8 +203,7 @@ export default function Agenda() {
       const startTime = setMinutes(setHours(parseISO(formData.date), hours), minutes);
       const endTime = addMinutes(startTime, service.duration_minutes);
 
-      const commissionAmount = (service.price * service.commission_percentage) / 100;
-
+      // commission_amount is calculated by the DB trigger, no need to send it
       const { data: newAppointment, error } = await supabase.from('appointments').insert({
         organization_id: organization.id,
         client_id: formData.client_id,
@@ -213,7 +212,6 @@ export default function Agenda() {
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
         price: service.price,
-        commission_amount: commissionAmount,
         notes: formData.notes || null,
         status: 'scheduled',
       }).select().single();

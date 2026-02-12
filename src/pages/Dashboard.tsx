@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment, Client, Service, Profile } from '@/types/database';
@@ -38,6 +39,21 @@ interface UpcomingAppointment extends Appointment {
   barber: Profile | null;
 }
 
+function StatCardSkeleton() {
+  return (
+    <Card className="card-gradient border-border/50">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-4 rounded" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-8 w-32 mb-1" />
+        <Skeleton className="h-3 w-20" />
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Dashboard() {
   const { profile, organization, user, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -53,13 +69,18 @@ export default function Dashboard() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<UpcomingAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for upgrade success
+  // Check for upgrade success or upgrade prompt
   useEffect(() => {
     if (searchParams.get('upgraded') === 'true') {
       toast.success('Assinatura ativada com sucesso!', {
         description: 'Agora você tem acesso a todas as funcionalidades Premium.',
       });
-      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard');
+    }
+    if (searchParams.get('upgrade') === 'true') {
+      toast.info('Funcionalidade Premium', {
+        description: 'Faça upgrade do seu plano para acessar esta funcionalidade.',
+      });
       window.history.replaceState({}, '', '/dashboard');
     }
   }, [searchParams]);
@@ -88,13 +109,26 @@ export default function Dashboard() {
         .gte('start_time', todayStart)
         .lte('start_time', todayEnd);
 
-      const todayRevenue = todayAppointments
+      const todayServiceRevenue = todayAppointments
         ?.filter((a) => a.status === 'completed')
         .reduce((sum, a) => sum + Number(a.price), 0) || 0;
 
+      // Fetch today's product sales
+      const { data: todayProductSales } = await supabase
+        .from('product_sales')
+        .select('total_price')
+        .eq('organization_id', organization.id)
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd);
+
+      const todayProductRevenue = todayProductSales?.reduce(
+        (sum, s) => sum + Number(s.total_price), 0
+      ) || 0;
+
+      const todayRevenue = todayServiceRevenue + todayProductRevenue;
       const todayCount = todayAppointments?.length || 0;
 
-      // Fetch month revenue
+      // Fetch month revenue (services)
       const { data: monthAppointments } = await supabase
         .from('appointments')
         .select('price')
@@ -103,7 +137,21 @@ export default function Dashboard() {
         .gte('start_time', monthStart)
         .lte('start_time', monthEnd);
 
-      const monthRevenue = monthAppointments?.reduce((sum, a) => sum + Number(a.price), 0) || 0;
+      const monthServiceRevenue = monthAppointments?.reduce((sum, a) => sum + Number(a.price), 0) || 0;
+
+      // Fetch month revenue (products)
+      const { data: monthProductSales } = await supabase
+        .from('product_sales')
+        .select('total_price')
+        .eq('organization_id', organization.id)
+        .gte('created_at', monthStart)
+        .lte('created_at', monthEnd);
+
+      const monthProductRevenue = monthProductSales?.reduce(
+        (sum, s) => sum + Number(s.total_price), 0
+      ) || 0;
+
+      const monthRevenue = monthServiceRevenue + monthProductRevenue;
 
       // Fetch total clients
       const { count: clientCount } = await supabase
@@ -125,10 +173,9 @@ export default function Dashboard() {
         ).length || 0;
       }
 
-      // Fetch pending commissions for this month
+      // Fetch pending commissions
       let pendingCommissions = 0;
       if (isAdmin) {
-        // Sum all completed appointments commissions
         const { data: commissionData } = await supabase
           .from('appointments')
           .select('commission_amount')
@@ -141,7 +188,6 @@ export default function Dashboard() {
           (sum, a) => sum + Number(a.commission_amount || 0), 0
         ) || 0;
 
-        // Sum product sales commissions
         const { data: productCommissions } = await supabase
           .from('product_sales')
           .select('commission_amount')
@@ -153,7 +199,6 @@ export default function Dashboard() {
           (sum, s) => sum + Number(s.commission_amount || 0), 0
         ) || 0;
 
-        // Subtract paid commissions
         const { data: paidCommissions } = await supabase
           .from('commission_payments')
           .select('total_commission')
@@ -168,7 +213,6 @@ export default function Dashboard() {
 
         pendingCommissions = totalServiceCommissions + totalProductCommissions - totalPaid;
       } else if (user?.id) {
-        // For barbers, show their own pending commissions
         const { data: myCommissions } = await supabase
           .from('appointments')
           .select('commission_amount')
@@ -261,7 +305,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Subscription Banner */}
       <PaywallBanner showAlways />
       
       <div className="space-y-6">
@@ -289,92 +332,103 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="card-gradient border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Faturamento Hoje
-              </CardTitle>
-              <DollarSign className="w-4 h-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gold-gradient">
-                {formatCurrency(stats.todayRevenue)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.todayAppointments} atendimentos hoje
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="card-gradient border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Faturamento Mensal
-              </CardTitle>
-              <TrendingUp className="w-4 h-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(stats.monthRevenue)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {format(new Date(), 'MMMM yyyy', { locale: ptBR })}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="card-gradient border-border/50 cursor-pointer hover:border-primary/30 transition-colors"
-            onClick={() => navigate('/comissoes')}
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isAdmin ? 'Comissões Pendentes' : 'Minhas Comissões'}
-              </CardTitle>
-              <Percent className="w-4 h-4 text-info" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-info">
-                {formatCurrency(stats.pendingCommissions)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {isAdmin ? 'a pagar este mês' : 'a receber este mês'}
-              </p>
-            </CardContent>
-          </Card>
-
-          {isAdmin ? (
-            <Card className={`card-gradient border-border/50 ${stats.lowStockProducts > 0 ? 'border-warning/50' : ''}`}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Estoque Baixo
-                </CardTitle>
-                <AlertTriangle className={`w-4 h-4 ${stats.lowStockProducts > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${stats.lowStockProducts > 0 ? 'text-warning' : ''}`}>
-                  {stats.lowStockProducts}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  produtos precisam reposição
-                </p>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
           ) : (
-            <Card className="card-gradient border-border/50">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total de Clientes
-                </CardTitle>
-                <Users className="w-4 h-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalClients}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  clientes cadastrados
-                </p>
-              </CardContent>
-            </Card>
+            <>
+              <Card className="card-gradient border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Faturamento Hoje
+                  </CardTitle>
+                  <DollarSign className="w-4 h-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-gold-gradient">
+                    {formatCurrency(stats.todayRevenue)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats.todayAppointments} atendimentos hoje
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="card-gradient border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Faturamento Mensal
+                  </CardTitle>
+                  <TrendingUp className="w-4 h-4 text-success" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(stats.monthRevenue)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {format(new Date(), 'MMMM yyyy', { locale: ptBR })}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="card-gradient border-border/50 cursor-pointer hover:border-primary/30 transition-colors"
+                onClick={() => navigate('/comissoes')}
+              >
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {isAdmin ? 'Comissões Pendentes' : 'Minhas Comissões'}
+                  </CardTitle>
+                  <Percent className="w-4 h-4 text-info" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-info">
+                    {formatCurrency(stats.pendingCommissions)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isAdmin ? 'a pagar este mês' : 'a receber este mês'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {isAdmin ? (
+                <Card className={`card-gradient border-border/50 ${stats.lowStockProducts > 0 ? 'border-warning/50' : ''}`}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Estoque Baixo
+                    </CardTitle>
+                    <AlertTriangle className={`w-4 h-4 ${stats.lowStockProducts > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${stats.lowStockProducts > 0 ? 'text-warning' : ''}`}>
+                      {stats.lowStockProducts}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      produtos precisam reposição
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="card-gradient border-border/50">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Total de Clientes
+                    </CardTitle>
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalClients}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      clientes cadastrados
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </div>
 
@@ -409,7 +463,25 @@ export default function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            {upcomingAppointments.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/50">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="w-12 h-12 rounded-lg" />
+                      <div>
+                        <Skeleton className="h-4 w-32 mb-2" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : upcomingAppointments.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Nenhum agendamento próximo</p>

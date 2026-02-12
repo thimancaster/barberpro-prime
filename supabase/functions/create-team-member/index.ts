@@ -99,11 +99,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if email is already registered
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const emailExists = existingUsers?.users?.some(u => u.email === email);
+    // Check if email is already registered using getUserByEmail (efficient, no pagination)
+    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email);
     
-    if (emailExists) {
+    if (existingUser?.user) {
       return new Response(
         JSON.stringify({ error: 'email_already_exists' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

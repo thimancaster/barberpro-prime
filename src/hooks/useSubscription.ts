@@ -3,16 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Subscription, SubscriptionState, SubscriptionStatus, PlanId } from '@/types/subscription';
 
-// Master account with lifetime premium access
-const MASTER_EMAIL = 'thimancaster@hotmail.com';
-
 export function useSubscription(): SubscriptionState {
-  const { organization, user } = useAuth();
+  const { organization, isMasterAccount } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Check if current user is the master account
-  const isMasterAccount = user?.email?.toLowerCase() === MASTER_EMAIL.toLowerCase();
 
   const fetchSubscription = useCallback(async () => {
     if (!organization?.id) {
@@ -43,21 +37,17 @@ export function useSubscription(): SubscriptionState {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  // Calculate derived state
+  // Calculate derived state - super admin checked via DB, not hardcoded email
   const status: SubscriptionStatus = isMasterAccount ? 'active' : (subscription?.status as SubscriptionStatus || 'expired');
   const plan: PlanId = isMasterAccount ? 'premium_yearly' : ((subscription?.plan_id as PlanId) || 'trial');
   const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
   const currentPeriodEnd = subscription?.current_period_end ? new Date(subscription.current_period_end) : null;
 
-  // Check if trial is expired (master account never expires)
   const isTrialExpired = !isMasterAccount && status === 'trialing' && trialEndsAt && trialEndsAt < new Date();
   const isExpired = !isMasterAccount && (status === 'expired' || status === 'canceled' || isTrialExpired);
-  
-  // Premium = master account OR active subscription or valid trial
   const isPremium = isMasterAccount || status === 'active' || (status === 'trialing' && !isTrialExpired);
   const isTrialing = !isMasterAccount && status === 'trialing' && !isTrialExpired;
 
-  // Calculate days remaining (master account = infinite)
   let daysRemaining = isMasterAccount ? 9999 : 0;
   if (!isMasterAccount) {
     if (isTrialing && trialEndsAt) {
