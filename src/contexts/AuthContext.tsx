@@ -3,9 +3,6 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, UserRole, Organization, AppRole } from '@/types/database';
 
-// Master account with full admin access
-const MASTER_EMAIL = 'thimancaster@hotmail.com';
-
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -18,6 +15,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -30,15 +28,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
-  // Check if current user is the master account
-  const isMasterAccount = user?.email?.toLowerCase() === MASTER_EMAIL.toLowerCase();
-  
-  // Master account always has admin privileges
-  const isAdmin = isMasterAccount || userRole?.role === 'admin';
+  // Super admin checked via database, not hardcoded
+  const isMasterAccount = isSuperAdmin;
+  const isAdmin = isSuperAdmin || userRole?.role === 'admin';
+
+  const checkSuperAdmin = async () => {
+    try {
+      const { data, error } = await (supabase.rpc as any)('check_is_super_admin');
+      if (!error && data === true) {
+        setIsSuperAdmin(true);
+      } else {
+        setIsSuperAdmin(false);
+      }
+    } catch {
+      setIsSuperAdmin(false);
+    }
+  };
 
   const fetchUserData = async (userId: string) => {
     try {
+      // Check super admin status
+      await checkSuperAdmin();
+
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
@@ -86,14 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          // Use setTimeout to avoid potential race conditions
           setTimeout(() => {
             fetchUserData(currentSession.user.id);
           }, 0);
@@ -101,13 +112,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
           setUserRole(null);
           setOrganization(null);
+          setIsSuperAdmin(false);
         }
 
         setIsLoading(false);
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
@@ -125,10 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
@@ -138,9 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         emailRedirectTo: window.location.origin,
-        data: {
-          full_name: fullName,
-        },
+        data: { full_name: fullName },
       },
     });
     return { error };
@@ -151,6 +157,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     setUserRole(null);
     setOrganization(null);
+    setIsSuperAdmin(false);
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    return { error };
   };
 
   return (
@@ -167,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signOut,
+        resetPassword,
         refreshProfile,
       }}
     >
