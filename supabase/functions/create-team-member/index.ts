@@ -99,15 +99,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if email is already registered using getUserByEmail (efficient, no pagination)
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email);
-    
-    if (existingUser?.user) {
-      return new Response(
-        JSON.stringify({ error: 'email_already_exists' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Email uniqueness is enforced by createUser below - if email exists, it returns an error
 
     // Create user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -119,9 +111,12 @@ Deno.serve(async (req) => {
 
     if (createError || !newUser.user) {
       console.error('Error creating user:', createError);
+      // Check if it's a duplicate email error
+      const isDuplicate = createError?.message?.toLowerCase().includes('already') || 
+                          createError?.message?.toLowerCase().includes('duplicate');
       return new Response(
-        JSON.stringify({ error: 'failed_to_create_user', details: createError?.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: isDuplicate ? 'email_already_exists' : 'failed_to_create_user', details: createError?.message }),
+        { status: isDuplicate ? 400 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
