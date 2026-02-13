@@ -169,7 +169,50 @@
 }
 
 @layer components {
-  /* Gold gradient text */
+  /* =========================================
+     1. LIQUID GLASS 2.0 (Cards e Paineis)
+     ========================================= */
+  .glass-panel {
+    @apply relative overflow-hidden bg-card/40 backdrop-blur-xl border border-white/5 shadow-elevated transition-all duration-500 rounded-xl;
+    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.05), 
+                0 4px 24px -4px rgba(0, 0, 0, 0.5);
+  }
+
+  .glass-panel:hover {
+    @apply bg-card/50 border-primary/30;
+    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 
+                0 8px 32px -4px rgba(197, 160, 89, 0.15);
+    transform: translateY(-2px);
+  }
+
+  /* =========================================
+     2. NEUMORPHISM SUTIL (Botoes Interativos)
+     ========================================= */
+  .btn-neo {
+    @apply relative overflow-hidden transition-all duration-300 active:scale-95;
+    box-shadow: -2px -2px 6px rgba(255, 255, 255, 0.02),
+                4px 4px 10px rgba(0, 0, 0, 0.5);
+  }
+  
+  .btn-gold-glass {
+    @apply bg-primary/20 text-primary border border-primary/30 backdrop-blur-md transition-all duration-300;
+  }
+  .btn-gold-glass:hover {
+    @apply bg-primary/30 border-primary/50;
+  }
+
+  /* =========================================
+     3. BACKGROUND AMBIENT GLOW
+     ========================================= */
+  .ambient-bg {
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(197, 160, 89, 0.04), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(197, 160, 89, 0.03), transparent 25%);
+  }
+
+  /* =========================================
+     4. GOLD GRADIENT TEXT
+     ========================================= */
   .text-gold-gradient {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, hsl(43 54% 60%), hsl(43 54% 45%));
