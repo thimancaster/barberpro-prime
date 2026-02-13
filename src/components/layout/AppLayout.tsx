@@ -9,7 +9,7 @@ export function AppLayout() {
       <AppSidebar />
       <SidebarInset className="flex-1">
         <AppHeader />
-        <main className="flex-1 p-6 animate-fade-in">
+        <main className="flex-1 p-6 animate-fade-in ambient-bg">
           <div>
             <Outlet />
           </div>

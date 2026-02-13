@@ -27,7 +27,7 @@ export function AppHeader() {
   const title = PAGE_TITLES[location.pathname] || '';
 
   return (
-    <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-40">
+    <header className="h-16 border-b border-white/5 bg-card/30 backdrop-blur-xl flex items-center justify-between px-4 sticky top-0 z-40">
       <div className="flex items-center gap-4">
         <SidebarTrigger className="lg:hidden">
           <Menu className="w-5 h-5" />

@@ -41,16 +41,14 @@ interface UpcomingAppointment extends Appointment {
 
 function StatCardSkeleton() {
   return (
-    <Card className="card-gradient border-border/50">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <div className="glass-panel p-6">
+      <div className="flex flex-row items-center justify-between pb-2">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-4 w-4 rounded" />
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-8 w-32 mb-1" />
-        <Skeleton className="h-3 w-20" />
-      </CardContent>
-    </Card>
+      </div>
+      <Skeleton className="h-8 w-32 mb-1" />
+      <Skeleton className="h-3 w-20" />
+    </div>
   );
 }
 
@@ -312,121 +310,145 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-display font-semibold">
-              {greeting()}, {profile?.full_name?.split(' ')[0]}!
+              {greeting()}, <span className="text-gold-gradient">{profile?.full_name?.split(' ')[0]}</span>!
             </h2>
             <p className="text-muted-foreground">
               Veja o resumo da sua barbearia hoje
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/vendas')} className="gap-2">
+            <Button variant="outline" onClick={() => navigate('/vendas')} className="gap-2 btn-neo">
               <ShoppingBag className="w-4 h-4" />
               Registrar Venda
             </Button>
-            <Button onClick={() => navigate('/agenda')} className="gap-2">
+            <Button onClick={() => navigate('/agenda')} className="gap-2 btn-neo btn-gold-glass">
               <Calendar className="w-4 h-4" />
               Ver Agenda
             </Button>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Bento Grid Stats */}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-min">
           {isLoading ? (
             <>
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
+              <div className="glass-panel p-6 lg:col-span-2 lg:row-span-2"><Skeleton className="h-8 w-32 mb-4" /><Skeleton className="h-12 w-48" /></div>
+              <div className="glass-panel p-6"><Skeleton className="h-8 w-32 mb-4" /><Skeleton className="h-10 w-40" /></div>
+              <div className="glass-panel p-6"><Skeleton className="h-8 w-32 mb-4" /><Skeleton className="h-10 w-40" /></div>
+              <div className="glass-panel p-6 lg:col-span-3"><Skeleton className="h-8 w-48" /></div>
             </>
           ) : (
             <>
-              <Card className="card-gradient border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Faturamento Hoje
-                  </CardTitle>
-                  <DollarSign className="w-4 h-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-gold-gradient">
+              {/* HERO: Faturamento Hoje */}
+              <div
+                className="glass-panel p-6 lg:col-span-2 lg:row-span-2 flex flex-col justify-between relative"
+                style={{ animationDelay: '0ms' }}
+              >
+                {/* Animated glow */}
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-primary/5 blur-3xl animate-float pointer-events-none" />
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground">Faturamento Hoje</span>
+                </div>
+                <div>
+                  <div className="text-4xl lg:text-5xl font-bold text-gold-gradient mb-2">
                     {formatCurrency(stats.todayRevenue)}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {stats.todayAppointments} atendimentos hoje
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="card-gradient border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Faturamento Mensal
-                  </CardTitle>
-                  <TrendingUp className="w-4 h-4 text-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(stats.monthRevenue)}
+                  <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                    <span>{stats.todayAppointments} atendimentos realizados</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Faturamento Mensal */}
+              <div
+                className="glass-panel p-6 flex flex-col justify-between"
+                style={{ animationDelay: '100ms' }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-muted-foreground">Mensal</span>
+                  <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-success" />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">{formatCurrency(stats.monthRevenue)}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {format(new Date(), 'MMMM yyyy', { locale: ptBR })}
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card 
-                className="card-gradient border-border/50 cursor-pointer hover:border-primary/30 transition-colors"
+              {/* Comissões */}
+              <div
+                className="glass-panel p-6 flex flex-col justify-between cursor-pointer"
                 onClick={() => navigate('/comissoes')}
+                style={{ animationDelay: '200ms' }}
               >
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {isAdmin ? 'Comissões Pendentes' : 'Minhas Comissões'}
-                  </CardTitle>
-                  <Percent className="w-4 h-4 text-info" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-info">
-                    {formatCurrency(stats.pendingCommissions)}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {isAdmin ? 'Comissões Pend.' : 'Minhas Comissões'}
+                  </span>
+                  <div className="w-9 h-9 rounded-lg bg-info/10 flex items-center justify-center">
+                    <Percent className="w-4 h-4 text-info" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {isAdmin ? 'a pagar este mês' : 'a receber este mês'}
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-info">{formatCurrency(stats.pendingCommissions)}</div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    Ver detalhes <ChevronRight className="w-3 h-3" />
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
+              {/* Bottom bar: Estoque ou Clientes */}
               {isAdmin ? (
-                <Card className={`card-gradient border-border/50 ${stats.lowStockProducts > 0 ? 'border-warning/50' : ''}`}>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Estoque Baixo
-                    </CardTitle>
-                    <AlertTriangle className={`w-4 h-4 ${stats.lowStockProducts > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${stats.lowStockProducts > 0 ? 'text-warning' : ''}`}>
-                      {stats.lowStockProducts}
+                <div
+                  className={`glass-panel p-5 lg:col-span-3 ${stats.lowStockProducts > 0 ? 'border-warning/30' : ''}`}
+                  style={{ animationDelay: '300ms' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stats.lowStockProducts > 0 ? 'bg-warning/10 text-warning' : 'bg-muted text-muted-foreground'}`}>
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Status do Estoque</p>
+                        <p className="text-xs text-muted-foreground">
+                          <span className={`font-bold ${stats.lowStockProducts > 0 ? 'text-warning' : ''}`}>
+                            {stats.lowStockProducts}
+                          </span>{' '}
+                          produtos precisam de reposição
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      produtos precisam reposição
-                    </p>
-                  </CardContent>
-                </Card>
+                    <Button variant="outline" size="sm" onClick={() => navigate('/produtos')} className="btn-neo">
+                      Gerenciar
+                    </Button>
+                  </div>
+                </div>
               ) : (
-                <Card className="card-gradient border-border/50">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Total de Clientes
-                    </CardTitle>
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalClients}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      clientes cadastrados
-                    </p>
-                  </CardContent>
-                </Card>
+                <div className="glass-panel p-5 lg:col-span-3" style={{ animationDelay: '300ms' }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Total de Clientes</p>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-bold">{stats.totalClients}</span> clientes cadastrados
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => navigate('/clientes')} className="btn-neo">
+                      Ver todos
+                    </Button>
+                  </div>
+                </div>
               )}
             </>
           )}
@@ -435,23 +457,22 @@ export default function Dashboard() {
         {/* Quick Actions for Admin */}
         {isAdmin && (
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/produtos')}>
+            <Button variant="outline" size="sm" onClick={() => navigate('/produtos')} className="btn-neo">
               <Plus className="w-4 h-4 mr-1" />
               Adicionar Produto
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/servicos')}>
+            <Button variant="outline" size="sm" onClick={() => navigate('/servicos')} className="btn-neo">
               <Plus className="w-4 h-4 mr-1" />
               Adicionar Serviço
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/clientes')}>
+            <Button variant="outline" size="sm" onClick={() => navigate('/clientes')} className="btn-neo">
               <Plus className="w-4 h-4 mr-1" />
               Cadastrar Cliente
             </Button>
           </div>
         )}
-
         {/* Upcoming Appointments */}
-        <Card className="card-gradient border-border/50">
+        <div className="glass-panel">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="font-display">Próximos Atendimentos</CardTitle>
@@ -529,7 +550,7 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );
